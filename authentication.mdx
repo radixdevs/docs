@@ -1,0 +1,46 @@
+---
+title: "Authentication"
+icon: "lock-a"
+---
+
+All API requests require a Bearer token in the Authorization header. Tokens are scoped to a single partner account and environment.
+
+## Getting your API key
+
+1. Sign in to your **Dashboard**.
+1. Go to **Settings \> API Key.**
+1. Both your sandbox or production keys will be viewable.
+1. Copy & use the key based on the environment.
+
+## Using your key
+
+```javascript
+curl -X GET https://namify.host/api/v1/domains/availability \
+  -H "Authorization: Bearer nk_live_abc123def456"
+```
+
+## Key prefixes
+
+> **nk_test\_\* -** Sandbox. No charges, simulated registrations.
+
+> **nk_live\_\* -** Production. Real charges, real ICANN registrations.
+
+<Warning>
+  Never expose keys in client-side code, Git repos, or logs. Use environment variables.
+</Warning>
+
+## Key management
+
+- Up to 2 active keys per account.
+- Revoke any key instantly by getting in touch with us.
+- Requests using a revoked key return 401 immediately.
+
+## Auth error codes
+
+| Code                     | Reason for error                                                    |
+| ------------------------ | ------------------------------------------------------------------- |
+| 401 Unauthorized         | Missing or invalid key. Check the header format and key value.      |
+| 401 key_revoked          | This key has been revoked. Generate a new one via dashboard.        |
+| 401 key_expired          | Key has passed its expiry date (if an expiry was set).              |
+| 403 Forbidden            | Valid key, but insufficient permissions for this endpoint/resource. |
+| 403 environment_mismatch | Using a sandbox key against production or vice versa.               |

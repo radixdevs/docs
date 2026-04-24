@@ -1,0 +1,1507 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Namify API",
+		"description": "The Namify API gives resellers and platform builders programmatic access to domain search, registration, renewal, customer management, and DNS configuration — all through a single authenticated REST interface.\n\nAll requests require a bearer token issued from the Namify dashboard (Settings > API Key). The API is scoped to your partner account: TLD availability, pricing, and order history are all filtered to your configured product catalogue.\n\n**Base URL:** `https://dev.namify.host`\n\n**Typical integration flow:**\n1. Create a customer account with `POST /api/v1/customers/signup`.\n2. Check domain availability with `GET /api/v1/domains/availability`.\n3. Register the domain with `POST /api/v1/domains/register`.\n4. Activate DNS with `POST /api/v1/dns/activate` and add records as needed.\n5. Renew the domain before expiry with `POST /api/v1/domains/renew`.",
+		"version": "1.0.0",
+		"license": {
+			"name": "MIT"
+		}
+	},
+	"servers": [
+		{
+			"url": "https://dev.namify.host"
+		}
+	],
+	"security": [
+		{
+			"bearerAuth": []
+		}
+	],
+	"paths": {
+		"/api/v1/hello": {
+			"get": {
+				"tags": ["Authentication"],
+				"summary": "Verify API connectivity and authentication",
+				"description": "A lightweight health-check endpoint. Use this call to confirm that your bearer token is valid and that the API server is reachable. Returns the current server timestamp and a confirmation message. Ideal for testing credentials during initial integration or diagnosing authentication issues.",
+				"responses": {
+					"200": {
+						"description": "Authentication successful. Returns server time and a confirmation message.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/HelloResponse" },
+								"example": {
+									"server_time": "2026-03-09 12:00:00",
+									"message": "Authorized"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "The API key is missing or does not correspond to a known partner.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"/api/v1/domains/availability": {
+			"get": {
+				"tags": ["Domains"],
+				"summary": "Check domain availability",
+				"description": "Checks whether one or more domain names are available for registration across the specified TLDs.\n\n**Input format:** `search_term` accepts a single SLD string or an array of SLD strings (label only — no dots or TLD). Pass the TLD(s) separately via `tlds[]`. This allows you to check the same name across multiple extensions in one request (e.g. `search_term=example&tlds[]=com&tlds[]=store&tlds[]=tech`).\n\n**TLD filtering:** Only TLDs enabled on your partner account are checked. Any requested TLD not in your allowed list is silently ignored. If no valid TLDs remain after filtering, the request falls back to your first allowed TLD.\n\n**Premium domains:** If a result has `premium: true`, the domain is available but carries a premium price. If your partner account does not support premium registrations, these are returned with `available: false`.\n\n**Result interpretation:** Each result in the `results` array corresponds to one domain+TLD combination. Check the `available` field to determine purchasability. Use this endpoint before calling `POST /api/v1/domains/register` to avoid failed registration attempts.",
+				"parameters": [
+					{
+						"name": "search_term",
+						"in": "query",
+						"required": true,
+						"description": "SLD (label only, no dots) to check. Accepts a single string or a repeated parameter for multiple SLDs (e.g. `search_term[]=example&search_term[]=myshop`). Must be 1–63 alphanumeric characters or hyphens; cannot start or end with a hyphen.",
+						"schema": {
+							"oneOf": [
+								{ "type": "string" },
+								{ "type": "array", "items": { "type": "string" } }
+							],
+							"example": "example"
+						}
+					},
+					{
+						"name": "tlds[]",
+						"in": "query",
+						"description": "TLD extensions to check (without leading dot, e.g. `com`, `store`, `tech`, `online`). Filtered to your partner's allowed TLD list. If omitted or all values are unrecognised, defaults to your first allowed TLD.",
+						"schema": {
+							"type": "array",
+							"items": { "type": "string" },
+							"example": ["com", "store", "tech"]
+						},
+						"style": "form",
+						"explode": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Availability results for each requested domain+TLD combination.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DomainAvailabilityResponse" },
+								"example": {
+									"results": [
+										{
+											"product_category": "domain_registration",
+											"domain_name": "example.com",
+											"sld": "example",
+											"tld": "com",
+											"available": true,
+											"premium": false
+										},
+										{
+											"product_category": "domain_registration",
+											"domain_name": "example.tech",
+											"sld": "example",
+											"tld": "tech",
+											"available": false,
+											"premium": false
+										}
+									]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "Validation error — `search_term` is missing or contains invalid characters.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorValidation" }
+							}
+						}
+					},
+					"400": {
+						"description": "Upstream request error.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorServer" }
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"/api/v1/domains/suggestions": {
+			"get": {
+				"tags": ["Domains"],
+				"summary": "Get domain name suggestions",
+				"description": "Returns a list of available domain name suggestions derived from a keyword. Useful for surfacing alternatives when the exact domain a customer wants is already taken.\n\n**How it works:** The engine generates variations of the `search_term` keyword — such as prefixes, suffixes, and synonyms — and returns only those that are currently available for registration. Each suggestion includes `available`, `premium`, `sld`, and `tld` fields in the same format as the availability check endpoint.\n\n**TLD scoping:** Use `tld` to restrict suggestions to one or more extensions. Only TLDs enabled on your partner account are used — unrecognised values are silently ignored and fall back to your first allowed TLD.\n\n**Premium domains:** Suggestions with `premium: true` carry a higher registration price. If your partner account does not support premium registrations, these are returned with `available: false`.\n\n**Recommended flow:** Use this endpoint alongside `GET /api/v1/domains/availability` — present exact-match results first, then fall back to suggestions when the target domain is unavailable.",
+				"parameters": [
+					{
+						"name": "search_term",
+						"in": "query",
+						"required": true,
+						"description": "Keyword to base suggestions on (SLD only, no dots). Must be 1–63 alphanumeric characters or hyphens; cannot start or end with a hyphen.",
+						"schema": { "type": "string", "example": "myshop" }
+					},
+					{
+						"name": "tld",
+						"in": "query",
+						"description": "TLD extension(s) to scope suggestions to (without leading dot). Filtered against your partner's allowed TLD list. If omitted or unrecognised, defaults to your first allowed TLD.",
+						"schema": {
+							"oneOf": [
+								{ "type": "string" },
+								{ "type": "array", "items": { "type": "string" } }
+							],
+							"example": "com"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of suggested domain names with their availability status.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DomainAvailabilityResponse" },
+								"example": {
+									"results": [
+										{
+											"product_category": "domain_registration",
+											"domain_name": "myshopnow.com",
+											"sld": "myshopnow",
+											"tld": "com",
+											"available": true,
+											"premium": false
+										},
+										{
+											"product_category": "domain_registration",
+											"domain_name": "myshophub.com",
+											"sld": "myshophub",
+											"tld": "com",
+											"available": true,
+											"premium": false
+										}
+									]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "Validation error — `search_term` is missing or contains invalid characters.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorValidation" }
+							}
+						}
+					},
+					"400": {
+						"description": "Upstream request error.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorServer" }
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"/api/v1/customers/signup": {
+			"post": {
+				"tags": ["Customers"],
+				"summary": "Create a new customer account",
+				"description": "Creates a new end-customer account under your reseller account.\n\n**Customer ID:** On success, the response includes a `customer_id`. Store it — this is the identifier required for all subsequent operations such as `POST /api/v1/domains/register` and `GET /api/v1/domains/orders`.\n\n**WHOIS contact:** The name, address, phone, and email supplied here are automatically set as the registrant, admin, tech, and billing contact for every domain registered under this account. Ensure the details are accurate and in English — non-ASCII characters may cause upstream validation failures.\n\n**Email uniqueness:** The email address serves as the customer's login username and must be unique across the platform. Submitting a duplicate email returns a `422` error.\n\n**Password requirements:** 9–15 characters, including at least one uppercase letter, one lowercase letter, one digit, and one special character from `~ * ! @ $ # % _ + . ? : , { }`.\n\n**State field:** Use the full state or province name (e.g. `California`, `England`). If the country has no states, pass `Other`.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["name","country_code","phone","email","password","country","address","state","city","zipcode"],
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 255,
+										"description": "Full legal name of the customer (first and last name). Used as the registrant contact name for domain WHOIS records.",
+										"example": "John Doe"
+									},
+									"company": {
+										"type": "string",
+										"description": "Company or organisation name associated with the account. Optional — omit or leave blank for individual (non-business) registrations.",
+										"example": "Acme Corp"
+									},
+									"country_code": {
+										"type": "string",
+										"description": "International telephone dialling prefix for the customer's country, without the leading '+' (e.g., '1' for US/Canada, '44' for UK, '49' for Germany).",
+										"example": "1"
+									},
+									"phone": {
+										"type": "string",
+										"description": "Customer's phone number, excluding the country dialling code and any leading zeros. Digits only — no spaces, dashes, or parentheses (e.g., '2125551234' for a New York number). Combined with `country_code` to form a full E.164-compliant number.",
+										"example": "2125551234"
+									},
+									"email": {
+										"type": "string",
+										"format": "email",
+										"description": "Customer's primary email address. This also serves as the customer's login username for the account. Used for account notifications, password resets, and as the registrant contact email in domain WHOIS records. Must be unique — re-submitting an existing address returns a 422 error.",
+										"example": "john.doe@example.com"
+									},
+									"password": {
+										"type": "string",
+										"minLength": 9,
+										"maxLength": 15,
+										"description": "Password for the new account. Use 9–15 characters, including at least one uppercase, one lowercase, one number, and one special character from the allowed set: ~ * ! @ $ # % _ + . ? : , { }",
+										"example": "SecureP@ss1"
+									},
+									"country": {
+										"type": "string",
+										"minLength": 2,
+										"maxLength": 2,
+										"description": "Two-letter country code as defined by ISO 3166-1 alpha-2 (e.g., 'US' for United States, 'GB' for United Kingdom, 'DE' for Germany). Must be uppercase.",
+										"example": "US"
+									},
+									"address": {
+										"type": "string",
+										"description": "Primary street address of the customer (house number and street name). Used as the registrant contact address for domain WHOIS records.",
+										"example": "123 Main Street, Apt 4B"
+									},
+									"state": {
+										"type": "string",
+										"description": "Full name of the state, province, or region of the customer's address (e.g., 'New York', 'California', 'England'). Use the state names listed in the `states` array for the relevant country in `countries.json`. If the customer's country has no states, pass `\"Other\"`.",
+										"example": "California"
+									},
+									"city": {
+										"type": "string",
+										"description": "City or locality of the customer's address.",
+										"example": "Los Angeles"
+									},
+									"zipcode": {
+										"type": "string",
+										"description": "Postal or ZIP code corresponding to the customer's address. Format varies by country (e.g., '10001' for US, 'EC1A 1BB' for UK).",
+										"example": "90001"
+									}
+								}
+							},
+							"example": {
+								"name": "John Doe",
+								"company": "Acme Corp",
+								"address": "123 Main Street, Apt 4B",
+								"city": "Los Angeles",
+								"state": "California",
+								"country": "US",
+								"zipcode": "90001",
+								"country_code": "1",
+								"phone": "3105559876",
+								"email": "john.doe@example.com",
+								"password": "SecureP@ss1"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Customer account created successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/SignupResponse" },
+								"example": {
+									"message": "Customer created",
+									"customer_id": 85384231
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Validation failed or the upstream provider rejected the request. Possible causes: a required field is missing or invalid; the password does not match the complexity criteria; the ZIP code is invalid; the phone number contains non-digit characters or is out of range; or the email address is already registered as a customer.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUserExists" }
+							}
+						}
+					},
+					"500": {
+						"description": "Unexpected server-side error. Typically occurs when the upstream provider returns an unrecognised response or an internal exception is thrown.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUserExists" },
+								"example": {
+									"status": "ERROR",
+									"message": "Signup Failed, please ensure that all the fields are valid and in English"
+								}
+							}
+						}
+					},
+					"502": {
+						"description": "The upstream provider returned an unexpected or unparseable response.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUserExists" },
+								"example": {
+									"status": "ERROR",
+									"message": "Signup failed (unexpected registrar response)"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"/api/v1/customers/details": {
+			"get": {
+				"tags": ["Customers"],
+				"summary": "Get customer details",
+				"description": "Retrieves detailed information for a specific customer account.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": {
+						"description": "Coming soon."
+					}
+				}
+			},
+            "put": {
+				"tags": ["Customers"],
+				"summary": "Update customer details",
+				"description": "Updates contact information for an existing customer account.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/customers": {
+			"get": {
+				"tags": ["Customers"],
+				"summary": "List customers",
+				"description": "Returns a paginated list of customer accounts belonging to your partner account.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			},
+			"delete": {
+				"tags": ["Customers"],
+				"summary": "Delete a customer account",
+				"description": "Permanently deletes a customer account and all associated data.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/contacts": {
+			"post": {
+				"tags": ["Contact Management"],
+				"summary": "Set contacts",
+				"description": "Sets or updates the contact information associated with your partner account.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			},
+			"get": {
+				"tags": ["Contact Management"],
+				"summary": "Get contacts",
+				"description": "Retrieves the contact information associated with your partner account.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/domains/register": {
+			"post": {
+				"tags": ["Domains"],
+				"summary": "Register a domain",
+				"description": "Registers a domain name under an existing customer account.\n\n**Before registering**, always verify the domain is available using `GET /api/v1/domains/availability`. Attempting to register an unavailable domain will result in a failed order.\n\n**Customer requirement:** The `customer_id` must correspond to an account previously created via `POST /api/v1/customers/signup`. The customer's saved contact details are automatically used as the WHOIS registrant, admin, tech, and billing contacts for the domain.\n\n**Billing:** A billing settlement is performed automatically before the registration is submitted to the registry. If the settlement fails, the registration will not proceed.\n\n**Duration:** You may register for 1–10 years. Some TLDs enforce a minimum registration period — check TLD-specific requirements if registration fails for a short duration.\n\n**On success**, the response includes an `order_id` which is required for subsequent operations such as renewal, DNS management, and privacy protection.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["customer_id","domain_name","duration"],
+								"properties": {
+									"customer_id": {
+										"type": "integer",
+										"description": "ID of the customer under whose account the domain will be registered.",
+										"example": 85384231
+									},
+									"domain_name": {
+										"type": "string",
+										"maxLength": 80,
+										"description": "Fully qualified domain name to register (e.g. `example.com`).",
+										"example": "example.com"
+									},
+									"duration": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 10,
+										"description": "Registration term in years (1–10).",
+										"example": 1
+									}
+								}
+							},
+							"example": {
+								"customer_id": 85384231,
+								"domain_name": "example.com",
+								"duration": 1
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Domain registered successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/RegisterResponse" },
+								"example": {
+									"status": "SUCCESS",
+									"message": "Domain registered successfully",
+									"order_id": 124680932
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "Registration failed. Possible causes: `customer_id` does not correspond to a known customer; the domain could not be registered (e.g. already taken, billing failure).",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_customer": {
+										"summary": "Unknown customer ID",
+										"value": { "status": "ERROR", "message": "Invalid customer ID" }
+									},
+									"registration_failed": {
+										"summary": "Registration could not be completed",
+										"value": { "status": "ERROR", "message": "Unable to register domain" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"/api/v1/domains/renew": {
+			"post": {
+				"tags": ["Domains"],
+				"summary": "Renew a domain",
+				"description": "Extends the registration term of an existing domain order before it expires.\n\n**Ownership check:** The `order_id` must belong to a domain under your partner account. Orders from other partners will be rejected with a 422.\n\n**Expiry verification:** The `expiry_timestamp` must exactly match the domain's current expiry as a Unix epoch timestamp. This acts as an optimistic concurrency check to prevent accidental double-renewals. Retrieve the current value from `GET /api/v1/domains/orders` before submitting.\n\n**Billing:** A billing settlement is performed automatically before the renewal is submitted to the registry. If the settlement fails, the renewal will not proceed.\n\n**Duration:** Renewals are accepted for 1–9 years. Some TLDs enforce a minimum renewal period (e.g. 2 years for `.ai`) — if the renewal fails for a short duration, try increasing the `duration`.\n\n**Timing:** Renew before the domain expires. Domains in `Pending Delete Restorable` status may require a restore instead of a standard renewal.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","duration","expiry_timestamp"],
+								"properties": {
+									"order_id": {
+										"type": "integer",
+										"description": "Order ID of the domain registration to renew.",
+										"example": 124680932
+									},
+									"duration": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 9,
+										"description": "Renewal term in years (1–9).",
+										"example": 1
+									},
+									"expiry_timestamp": {
+										"type": "integer",
+										"description": "Current expiry of the domain as a Unix epoch timestamp. Must match exactly — use `GET /api/v1/domains/orders` to retrieve it.",
+										"example": 1835699117
+									}
+								}
+							},
+							"example": {
+								"order_id": 124680932,
+								"duration": 1,
+								"expiry_timestamp": 1835699117
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Domain renewed successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/RenewResponse" },
+								"example": {
+									"status": "SUCCESS",
+									"message": "Domain order renewed"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "Renewal failed. Possible causes: `order_id` does not belong to your partner account; `expiry_timestamp` does not match the domain's current expiry; billing or upstream renewal failed.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Order not found",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"invalid_expiry": {
+										"summary": "Expiry timestamp mismatch",
+										"value": { "status": "ERROR", "message": "Invalid current expiry timestamp" }
+									},
+									"renewal_failed": {
+										"summary": "Renewal could not be completed",
+										"value": { "status": "ERROR", "message": "Failed to renew the domain order" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"/api/v1/dns/activate": {
+			"post": {
+				"tags": ["DNS"],
+				"summary": "Activate DNS service",
+				"description": "Activates the DNS service for a domain order, enabling DNS record management for that domain.\n\n**Prerequisite:** DNS must be activated before any DNS records (A, AAAA, CNAME, MX, TXT) can be added to the domain. Call this endpoint once per domain before using the other DNS endpoints.\n\n**Ownership check:** The `order_id` must belong to a domain under your partner account. Orders from other partners will be rejected with a 422.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id"],
+								"properties": {
+									"order_id": {
+										"type": "integer",
+										"description": "Order ID of the domain for which DNS service should be activated.",
+										"example": 124680932
+									}
+								}
+							},
+							"example": { "order_id": 124680932 }
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "DNS service activated successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsActivateResponse" },
+								"example": { "status": "SUCCESS", "message": "DNS service activated successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to a domain under your partner account.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"example": { "status": "ERROR", "message": "Invalid order ID" }
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"/api/v1/domains/orders": {
+			"get": {
+				"tags": ["Domains"],
+				"summary": "List domain orders",
+				"description": "Returns a paginated list of domain orders belonging to a specific customer under your partner account.\n\n**Statuses returned:** Only orders with a current status of `Active`, `Suspended`, `Pending Delete Restorable`, or `Expired` are included. Domains past their expiry date are automatically marked as `Expired` based on their `expiry_timestamp`, regardless of the upstream registry status.\n\n**Pagination:** Results are paged. Use the `page` parameter to navigate through large result sets. The response includes `total_orders` (total matching records across all pages) and `orders_on_page` (count on the current page).\n\n**Filtering:** Use the optional `search` parameter to filter results by domain name keyword.\n\n**Renewal workflow:** The `expiry_timestamp` on each order is the value you must pass to `POST /api/v1/domains/renew`. Always fetch the latest value from this endpoint immediately before submitting a renewal to avoid expiry mismatch errors.",
+				"parameters": [
+					{
+						"name": "customer_id",
+						"in": "query",
+						"required": true,
+						"description": "ID of the customer whose domain orders to retrieve.",
+						"schema": { "type": "integer", "example": 85384231 }
+					},
+					{
+						"name": "page",
+						"in": "query",
+						"description": "Page number for pagination. Defaults to 1.",
+						"schema": { "type": "integer", "default": 1, "example": 1 }
+					},
+					{
+						"name": "search",
+						"in": "query",
+						"description": "Optional keyword to filter orders by domain name.",
+						"schema": { "type": "string", "example": "example" }
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Domain orders retrieved successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DomainOrdersResponse" },
+								"example": {
+									"total_orders": 2,
+									"orders_on_page": 2,
+									"orders": [
+										{
+											"order_id": 124680932,
+											"domain_name": "example.com",
+											"status": "Active",
+											"expiry": "Mar 8, 2028",
+											"expiry_timestamp": 1835699117
+										},
+										{
+											"order_id": 124680901,
+											"domain_name": "myshop.com",
+											"status": "Expired",
+											"expiry": "Jan 1, 2025",
+											"expiry_timestamp": 1735689600
+										}
+									]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `customer_id` does not correspond to a known customer.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"example": { "status": "ERROR", "message": "Invalid customer ID" }
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"/api/v1/domains/details": {
+			"get": {
+				"tags": ["Domains"],
+				"summary": "Get domain details",
+				"description": "Returns detailed information for a specific domain order.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": {
+						"description": "Coming soon."
+					}
+				}
+			}
+		},
+
+		"/api/v1/domains/delete": {
+			"post": {
+				"tags": ["Domains"],
+				"summary": "Delete a domain",
+				"description": "Deletes a domain order.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": {
+						"description": "Coming soon."
+					}
+				}
+			}
+		},
+
+		"/api/v1/domains/auto-renew": {
+			"put": {
+				"tags": ["Domains"],
+				"summary": "Set auto-renew",
+				"description": "Enables or disables automatic renewal for a domain before its expiry date.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/transfers/lock": {
+			"put": {
+				"tags": ["Transfers"],
+				"summary": "Lock / Unlock domain transfer",
+				"description": "Locks or unlocks the transfer status of a domain to prevent or allow transfers to another registrar.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/transfers/auth-code": {
+			"get": {
+				"tags": ["Transfers"],
+				"summary": "View transfer code",
+				"description": "Retrieves the EPP authorization code required to transfer a domain to another registrar.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/transfers/status": {
+			"get": {
+				"tags": ["Transfers"],
+				"summary": "Get transfer status",
+				"description": "Returns the current status of an in-progress domain transfer.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/transfers": {
+			"get": {
+				"tags": ["Transfers"],
+				"summary": "List transfers",
+				"description": "Returns a paginated list of domain transfers associated with your partner account.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/privacy-protection": {
+			"post": {
+				"tags": ["Privacy Protection"],
+				"summary": "Purchase privacy",
+				"description": "Adds or renews WHOIS privacy protection for a domain, keeping personal contact details hidden from public lookups.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			},
+			"put": {
+				"tags": ["Privacy Protection"],
+				"summary": "Enable / Disable privacy",
+				"description": "Enables or disables WHOIS privacy protection on a domain that already has privacy purchased.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/dns/a-record": {
+			"post": {
+				"tags": ["DNS"],
+				"summary": "Add an A record",
+				"description": "Adds an A record to the domain's DNS zone, mapping a hostname to an IPv4 address.\n\n**Use case:** Point your domain or subdomain to a server's IPv4 address (e.g. point `www.example.com` → `203.0.113.10`).\n\n**host:** The subdomain label relative to the domain zone. Use `@` or omit to target the apex domain. Use a label like `www` or `blog` for subdomains.\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "IPv4 address the record should resolve to.", "example": "203.0.113.10" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone (e.g. `www`, `blog`). Use `@` or omit for the apex domain.", "example": "www" },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "203.0.113.10", "host": "www" }
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A record added successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record added successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the record. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider (e.g. `Duplicate record found`).",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the record",
+										"value": { "status": "ERROR", "message": "Duplicate record found" }
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": ["DNS"],
+				"summary": "Modify an A record",
+				"description": "Modifies an existing A record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			},
+			"delete": {
+				"tags": ["DNS"],
+				"summary": "Delete an A record",
+				"description": "Deletes an A record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/dns/aaaa-record": {
+			"post": {
+				"tags": ["DNS"],
+				"summary": "Add an AAAA record",
+				"description": "Adds an AAAA record to the domain's DNS zone, mapping a hostname to an IPv6 address.\n\n**Use case:** Point your domain or subdomain to a server's IPv6 address for IPv6-capable networks.\n\n**host:** The subdomain label relative to the domain zone. Use `@` or omit to target the apex domain. Use a label like `www` or `mail` for subdomains.\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "IPv6 address the record should resolve to.", "example": "2001:db8:3333:4444:5555:6666:7777:8888" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone (e.g. `www`, `mail`). Use `@` or omit for the apex domain.", "example": "www" },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "2001:db8:3333:4444:5555:6666:7777:8888", "host": "www" }
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "AAAA record added successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record added successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the record. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider (e.g. `Duplicate record found`).",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the record",
+										"value": { "status": "ERROR", "message": "Duplicate record found" }
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": ["DNS"],
+				"summary": "Modify an AAAA record",
+				"description": "Modifies an existing AAAA record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			},
+			"delete": {
+				"tags": ["DNS"],
+				"summary": "Delete an AAAA record",
+				"description": "Deletes an AAAA record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/dns/cname-record": {
+			"post": {
+				"tags": ["DNS"],
+				"summary": "Add a CNAME record",
+				"description": "Adds a CNAME (Canonical Name) record to the domain's DNS zone, aliasing one hostname to another.\n\n**Use case:** Alias a subdomain to another hostname — for example, point `www.example.com` → `example.com`, or point `shop.example.com` → a third-party platform's domain.\n\n**host:** The subdomain label being aliased (relative to the zone). Use a label like `www` or `shop`. CNAME records cannot be set on the apex domain (`@`) — use an A record for that.\n\n**value:** The target hostname the alias should resolve to (fully qualified, e.g. `target.example.com`).\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "Target hostname this alias should resolve to (fully qualified domain name).", "example": "target.example.com" },
+									"host": { "type": "string", "description": "Subdomain label being aliased, relative to the zone (e.g. `www`, `shop`). Cannot be `@` — CNAME is not allowed at the apex.", "example": "www" },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "target.example.com", "host": "www" }
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "CNAME record added successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record added successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the record. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider (e.g. `Duplicate record found`).",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the record",
+										"value": { "status": "ERROR", "message": "Duplicate record found" }
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": ["DNS"],
+				"summary": "Modify a CNAME record",
+				"description": "Modifies an existing CNAME record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			},
+			"delete": {
+				"tags": ["DNS"],
+				"summary": "Delete a CNAME record",
+				"description": "Deletes a CNAME record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/dns/mx-record": {
+			"post": {
+				"tags": ["DNS"],
+				"summary": "Add an MX record",
+				"description": "Adds an MX (Mail Exchanger) record to the domain's DNS zone, directing inbound email to a mail server.\n\n**Use case:** Route email for the domain to a mail server — for example, to configure Google Workspace, Microsoft 365, or a custom mail server.\n\n**host:** The domain or subdomain receiving mail, relative to the zone. Use `@` or omit to configure mail for the root domain. Use a subdomain label (e.g. `mail`) for subdomain-specific routing.\n\n**value:** The fully qualified hostname of the mail server (e.g. `mail.example.com` or `aspmx.l.google.com`).\n\n**priority:** Determines mail server preference when multiple MX records exist. Lower values have higher priority (e.g. `10` is preferred over `20`). Omit to use the default.\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "Fully qualified hostname of the mail server.", "example": "aspmx.l.google.com" },
+									"host": { "type": "string", "description": "Domain or subdomain receiving mail, relative to the zone. Use `@` or omit for the root domain.", "example": "@" },
+									"priority": { "type": "integer", "description": "Mail server priority. Lower values are preferred. Common values: 10 (primary), 20 (secondary).", "example": 10 },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "aspmx.l.google.com", "host": "@", "priority": 10 }
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "MX record added successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record added successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the record. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider (e.g. `Duplicate record found`).",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the record",
+										"value": { "status": "ERROR", "message": "Duplicate record found" }
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": ["DNS"],
+				"summary": "Modify an MX record",
+				"description": "Modifies an existing MX record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			},
+			"delete": {
+				"tags": ["DNS"],
+				"summary": "Delete an MX record",
+				"description": "Deletes an MX record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/dns/txt-record": {
+			"post": {
+				"tags": ["DNS"],
+				"summary": "Add a TXT record",
+				"description": "Adds a TXT record to the domain's DNS zone. TXT records store arbitrary text data and are widely used for domain verification and email authentication.\n\n**Common use cases:**\n- **Domain verification:** Prove ownership to Google Search Console, Stripe, and similar services (e.g. `google-site-verification=abc123`).\n- **SPF:** Define authorised mail senders to reduce spam (e.g. `v=spf1 include:_spf.google.com ~all`).\n- **DKIM:** Publish a public key for email signing (typically on a `selector._domainkey` host).\n- **DMARC:** Set email authentication policy (typically on `_dmarc` host).\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex. Use a specific label for subdomain-targeted records (e.g. `_dmarc`, `google._domainkey`).\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "Text content of the record.", "example": "v=spf1 include:_spf.google.com ~all" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone. Use `@` or omit for the apex, or a specific label for targeted records (e.g. `_dmarc`, `google._domainkey`).", "example": "@" },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"examples": {
+								"spf": {
+									"summary": "SPF record",
+									"value": { "order_id": 124680932, "value": "v=spf1 include:_spf.google.com ~all", "host": "@" }
+								},
+								"domain_verification": {
+									"summary": "Domain ownership verification",
+									"value": { "order_id": 124680932, "value": "google-site-verification=rXOxyAbCdEfGh", "host": "@" }
+								},
+								"dmarc": {
+									"summary": "DMARC policy",
+									"value": { "order_id": 124680932, "value": "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com", "host": "_dmarc" }
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "TXT record added successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record added successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the record. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider (e.g. `Duplicate record found`).",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the record",
+										"value": { "status": "ERROR", "message": "Duplicate record found" }
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": ["DNS"],
+				"summary": "Modify a TXT record",
+				"description": "Modifies an existing TXT record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			},
+			"delete": {
+				"tags": ["DNS"],
+				"summary": "Delete a TXT record",
+				"description": "Deletes a TXT record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/premiums/pricing": {
+			"get": {
+				"tags": ["Premiums"],
+				"summary": "Fetch premium pricing",
+				"description": "Returns pricing information for premium domains.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/premiums/register": {
+			"post": {
+				"tags": ["Premiums"],
+				"summary": "Register premium domain",
+				"description": "Registers a premium domain under an existing customer account.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/premiums/renew": {
+			"post": {
+				"tags": ["Premiums"],
+				"summary": "Renew premium domain",
+				"description": "Renews the registration term of an existing premium domain order.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/pricing": {
+			"get": {
+				"tags": ["Miscellaneous"],
+				"summary": "Get pricing",
+				"description": "Returns registration, renewal, and restore pricing for available TLDs.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/coupons/validate": {
+			"post": {
+				"tags": ["Miscellaneous"],
+				"summary": "Validate coupon code",
+				"description": "Validates a coupon code and returns its applicable discount details.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
+				"x-hidden": true,
+				"x-playground": "none",
+				"responses": {
+					"200": { "description": "Coming soon." }
+				}
+			}
+		}
+	},
+
+	"components": {
+		"schemas": {
+			"HelloResponse": {
+				"type": "object",
+				"properties": {
+					"server_time": { "type": "string", "description": "Current date and time on the API server (YYYY-MM-DD HH:MM:SS).", "example": "2026-03-09 12:00:00" },
+					"message": { "type": "string", "description": "Confirmation message indicating the request was authenticated successfully.", "example": "Authorized" }
+				}
+			},
+			"DomainAvailabilityResponse": {
+				"type": "object",
+				"properties": {
+					"results": {
+						"type": "array",
+						"items": { "$ref": "#/components/schemas/DomainResult" }
+					}
+				}
+			},
+			"DomainResult": {
+				"type": "object",
+				"properties": {
+					"product_category": { "type": "string", "description": "Product type — always `domain_registration` for domain availability results.", "example": "domain_registration" },
+					"domain_name": { "type": "string", "description": "Fully qualified domain name composed of the SLD and TLD (e.g. `example.com`).", "example": "example.com" },
+					"sld": { "type": "string", "description": "Second-level domain label — the part of the domain before the TLD.", "example": "example" },
+					"tld": { "type": "string", "description": "Top-level domain extension (without leading dot).", "example": "com" },
+					"available": { "type": "boolean", "description": "`true` if the domain is available for registration. `false` if it is already registered or if it is a premium domain on an account that does not support premium registrations.", "example": true },
+					"premium": { "type": "boolean", "description": "`true` if this is a premium domain carrying a higher-than-standard registration price. Premium domains currently cannot be registered through this API.", "example": false }
+				}
+			},
+			"SignupResponse": {
+				"type": "object",
+				"properties": {
+					"message": { "type": "string", "example": "Customer created" },
+					"customer_id": { "type": "integer", "description": "Unique ID assigned to the newly created customer. Use this value as `customer_id` in subsequent calls (e.g. domain registration, order lookup).", "example": 85384231 }
+				}
+			},
+			"RegisterResponse": {
+				"type": "object",
+				"properties": {
+					"status": { "type": "string", "example": "SUCCESS" },
+					"message": { "type": "string", "example": "Domain registered successfully" },
+					"order_id": { "type": "integer", "description": "Unique identifier for the new domain order. Store this — it is required for renewal, DNS management, and order lookup.", "example": 124680932 }
+				}
+			},
+			"RenewResponse": {
+				"type": "object",
+				"properties": {
+					"status": { "type": "string", "example": "SUCCESS" },
+					"message": { "type": "string", "example": "Domain order renewed" }
+				}
+			},
+			"DnsActivateResponse": {
+				"type": "object",
+				"properties": {
+					"status": { "type": "string", "example": "SUCCESS" },
+					"message": { "type": "string", "example": "DNS service activated successfully" }
+				}
+			},
+			"DomainOrdersResponse": {
+				"type": "object",
+				"properties": {
+					"total_orders": { "type": "integer", "description": "Total number of orders matching the query across all pages.", "example": 42 },
+					"orders_on_page": { "type": "integer", "description": "Number of orders returned on the current page.", "example": 10 },
+					"orders": {
+						"type": "array",
+						"items": { "$ref": "#/components/schemas/DomainOrder" }
+					}
+				}
+			},
+			"DomainOrder": {
+				"type": "object",
+				"properties": {
+					"order_id": { "type": "integer", "description": "Unique order identifier. Use this value for renewal (`POST /api/v1/domains/renew`) and DNS management.", "example": 124689073 },
+					"domain_name": { "type": "string", "description": "Fully qualified registered domain name.", "example": "devtest0000003.com" },
+					"status": { "type": "string", "description": "Current lifecycle status of the domain order.", "enum": ["Active", "Suspended", "Pending Delete Restorable"], "example": "Active" },
+					"expiry": { "type": "string", "description": "Human-readable expiry date (e.g. 'Mar 3, 2027').", "example": "Mar 3, 2027" },
+					"expiry_timestamp": { "type": "integer", "description": "Expiry date as a Unix epoch timestamp. Pass this value unchanged as `expiry_timestamp` when calling `POST /api/v1/domains/renew`.", "example": 1804076717 }
+				}
+			},
+			"DnsRecordResponse": {
+				"type": "object",
+				"properties": {
+					"status": { "type": "string", "example": "SUCCESS" },
+					"message": { "type": "string", "example": "Record added successfully" }
+				}
+			},
+			"ErrorUnauthorized": {
+				"type": "object",
+				"required": ["message"],
+				"properties": {
+					"message": { "type": "string", "example": "Unauthorized" }
+				}
+			},
+			"ErrorUserExists": {
+				"type": "object",
+				"required": ["message"],
+				"properties": {
+					"message": { "type": "string", "example": "User already exists" }
+				}
+			},
+			"ErrorInvalidOrder": {
+				"type": "object",
+				"required": ["status","message"],
+				"properties": {
+					"status": { "type": "string", "example": "ERROR" },
+					"message": { "type": "string", "example": "Invalid order ID" }
+				}
+			},
+			"ErrorValidation": {
+				"type": "object",
+				"required": ["message"],
+				"properties": {
+					"message": { "type": "string", "example": "The search term field is required." }
+				}
+			},
+			"ErrorBadRequest": {
+				"type": "object",
+				"required": ["message"],
+				"properties": {
+					"message": { "type": "string", "example": "Bad Request." }
+				}
+			},
+			"ErrorServer": {
+				"type": "object",
+				"required": ["message"],
+				"properties": {
+					"message": { "type": "string", "example": "Server Error." }
+				}
+			}
+		},
+		"securitySchemes": {
+			"bearerAuth": {
+				"type": "http",
+				"scheme": "bearer",
+				"description": "A personal access token. Obtain one from the dashboard under Settings > API Key. Include it in the `Authorization` header as `Bearer <token>`. Unauthenticated requests to protected routes return `401 Unauthorized`."
+			}
+		}
+	}
+}

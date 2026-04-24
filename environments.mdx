@@ -1,0 +1,47 @@
+---
+title: "Environments"
+icon: "pen-ruler"
+---
+
+Namify provides two fully isolated environments. Same API surface, same endpoints, same response shapes. The only differences are real-world impact and billing.
+
+## <Icon icon="pencil" />  Sandbox
+
+| **Variable**       | Description                                                         |
+| :----------------- | :------------------------------------------------------------------ |
+| **Base URL**       | [https://dev.namify.host/api/v1](https://dev.api.namify.tech/v1)    |
+| **Key prefix**     | nk_test\_\*                                                         |
+| **Billing**        | No charges. All transactions succeed without debiting your account. |
+| **Registrations**  | Simulated. Nothing is submitted to ICANN or any registry.           |
+| **Availability**   | Most standard TLDs return as available.                             |
+| **Webhooks**       | Fire normally. Test your integration end-to-end.                    |
+| **Data retention** | Purged every 24hrs. Do not rely on sandbox for persistence.         |
+| **Pre-funded**     | Sandbox accounts come with simulated credit. No setup required.     |
+
+## <Icon icon="code" />  Production
+
+| **Variable**      | Description                                                                            |
+| :---------------- | :------------------------------------------------------------------------------------- |
+| **Base URL**      | [https://namify.host/api/v1](https://api.namify.tech/v1)                               |
+| **Key prefix**    | nk_live\_\*                                                                            |
+| **Billing**       | Real charges. Invoiced monthly or per-transaction<br />based on your commercial terms. |
+| **Registrations** | Live ICANN registrations. Domains are active on the internet.                          |
+| **Webhooks**      | Fire normally.                                                                         |
+
+## Switching environments
+
+Swap two environment variables. No code changes:
+
+```shellscript
+# Sandbox
+NAMIFY_BASE_URL=https://dev.namify.host/api/v1
+NAMIFY_API_KEY=nk_test_...
+
+# Production
+NAMIFY_BASE_URL=https://namify.host/api/v1
+NAMIFY_API_KEY=nk_live_...
+```
+
+## Migration path
+
+Build and test against sandbox. When your integration passes the Go-Live Checklist, swap in production credentials. The API behavior is identical the only change is that domains become real and billing begins.

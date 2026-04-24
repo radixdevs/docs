@@ -1,0 +1,56 @@
+---
+title: "TLD Catalogue"
+icon: "list-check"
+---
+
+Namify supports a broad portfolio of TLDs through a single integration. Pricing is partner-specific and reflects your negotiated commercial terms.
+
+## Supported TLD categories
+
+| Category              | Example                                      |
+| :-------------------- | :------------------------------------------- |
+| Legacy gTLDs          | .com, .net, .org                             |
+| Popular new gTLDs     | .store, .online, .tech                       |
+| Country-code (ccTLDs) | Select ccTLDs - varies by partner agreement. |
+| Industry-specific     | .design, .agency, .studio, and more.         |
+
+## Programmatic access
+
+Use the TLD pricing endpoint to get the full, current list of supported TLDs with registration and renewal pricing:
+
+```shellscript
+{
+  "tlds": [
+    {
+      "tld": ".com",
+      "registration_price": 11.99,
+      "renewal_price": 14.99,
+      "transfer_price": 11.99,
+      "currency": "USD",
+      "min_period": 1,
+      "max_period": 10,
+      "privacy_available": true,
+      "restrictions": null
+    },
+    {
+      "tld": ".store",
+      "registration_price": 2.99,
+      "renewal_price": 9.99,
+      "transfer_price": 9.99,
+      "currency": "USD",
+      "min_period": 1,
+      "max_period": 10,
+      "privacy_available": true,
+      "restrictions": null
+    }
+  ]
+}
+```
+
+## TLD restrictions
+
+Some TLDs have registration requirements (e.g., .us requires a US nexus category, .eu requires EU/EEA residency). When restrictions apply, the restrictions field contains details. Attempting to register without meeting requirements returns a 422 error with the specific missing fields.
+
+## Pricing tiers
+
+Prices displayed above are illustrative. Your actual pricing depends on your partner agreement, volume tier, and any promotional arrangements. Contact your partner manager for a detailed pricing schedule.

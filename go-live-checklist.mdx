@@ -1,0 +1,43 @@
+---
+title: "Go-Live Checklist"
+icon: "clipboard-list"
+---
+
+Verify these before switching from sandbox to production. This is the gate between testing and real registrations.
+
+## Authentication
+
+Production API key generated and stored securely (environment variable, secrets manager - never in code).
+
+> Base URL set to [**https://namify.host/api/v1**](https://namify.host/api/v1).
+
+401 & other error handling tested and user-facing messaging in place.
+
+## Integration
+
+- Customer creation flow tested. Every domain registration is tied to a `customer_id.`
+- Domain search, availability check, and registration flow tested end-to-end.
+- Renewal flow tested (manual and/or auto-renew, depending on your tier).
+
+## Webhooks
+
+- Webhook endpoint deployed and reachable over HTTPS.
+- Signature verification implemented and tested.
+- Key events handled: `domain.registered`, `domain.renewed`, `domain.expired`, `domain.auto_renew_failed`.
+- Idempotent event processing in place (duplicate webhook delivery handled).
+
+## Error handling
+
+4xx errors surfaced to users with clear messaging (domain unavailable, invalid input, payment failed).
+
+Rate limit (429) handling with Retry-After header.
+
+## Operations
+
+- Logging: request_id from every API response stored for debugging.
+- Monitoring: alerts on elevated error rates, failed webhooks, and failed renewals.
+- Support escalation path defined (your support team \> Namify partner support).
+
+<Tip>
+  **Tip:** Run through this checklist with your team before enabling production keys. It saves a lot of post-launch fire drills. You can also consult with us to help you through the journey.
+</Tip>

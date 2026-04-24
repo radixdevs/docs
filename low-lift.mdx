@@ -1,0 +1,53 @@
+---
+icon: "arrow-pointer"
+title: "Low Lift"
+---
+
+The fastest way to offer domains. Add a button, we handle everything else. We host everything; search, checkout, management - on a co-branded Namify platform.
+
+<video src="/videos/gituhub.mp4" controls={true} />
+
+## What you build
+
+A "Get a domain" button or link in your product that redirects to the Namify hosted flow.
+
+<Note>
+  Optionally, a webhook handler to activate the domain in your product after registration.
+</Note>
+
+## Typical integration
+
+A "Get a domain" button or link in your product that redirects to the Namify hosted flow.
+
+<Steps>
+  <Step title="Link Out">
+    Embed the link as a button or redirect in your product.
+  </Step>
+  <Step title="Search">
+    Your user completes domain search and registration on the Namify hosted flow.
+  </Step>
+  <Step title="Manage">
+    Your user logs into their Namify dashboard to use and manage their domain
+  </Step>
+  <Step title="Optional">
+    Namify can fire a `domain.registered` webhook to your endpoint with the domain, customer\_id, and order details. Your backend receives the webhook and activates the custom domain in your product.
+  </Step>
+</Steps>
+
+## 🤖 Fastest Way to Integrate
+
+Copy any API request and paste it into ChatGPT or Claude to generate working code instantly.
+
+Or use the built-in **“Ask a question…”** assistant to understand endpoints and generate integrations in real time — no manual setup, no guesswork.
+
+## Customization
+
+Logo, primary brand color, favicon, and a custom return URL. Configure in Settings \> Hosted Flow on your Namify partner dashboard.
+
+## Limitations
+
+You do not control the search UX, checkout flow, or payment collection. If you need that control, move to Hybrid.
+
+<Tip>
+  **Variation:** You add the search box and API at your end and once the user selects the domain name they are sent to namify.tech to complete the transaction and a optionally webhook to push back the confirmation
+</Tip>

@@ -1,0 +1,174 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Namify API",
+  "colors": {
+    "primary": "#FFF",
+    "light": "#FFF",
+    "dark": "#000"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting started",
+        "pages": [
+          "index",
+          "quickstart",
+          "authentication",
+          "environments"
+        ]
+      },
+      {
+        "group": "Integration Guide",
+        "expanded": true,
+        "pages": [
+          "integration-patterns",
+          "low-lift",
+          "hybrid",
+          "full-api",
+          "go-live-checklist"
+        ]
+      },
+      {
+        "group": "API Reference",
+        "pages": [
+          "api-overview",
+          "api-reference/hello",
+          {
+            "group": "Customers",
+            "expanded": true,
+            "pages": [
+              "api-reference/customer/signup",
+              "api-reference/customer/get-customer",
+              "api-reference/customer/update-customer",
+              "api-reference/customer/remove-customer",
+              "api-reference/customer/all-customers",
+              "api-reference/customer/countries-json"
+            ]
+          },
+          {
+            "group": "Contact Management",
+            "expanded": true,
+            "pages": [
+              "set-contacts",
+              "get-contacts"
+            ]
+          },
+          {
+            "group": "Domains",
+            "expanded": true,
+            "pages": [
+              "api-reference/domains/availability",
+              "api-reference/domains/suggestions",
+              "api-reference/domains/registration",
+              "api-reference/domains/renewal",
+              "api-reference/domains/orders",
+              "api-reference/domains/domain-details",
+              "api-reference/domains/delete-domain",
+              "api-reference/domains/toggle-auto-renew"
+            ]
+          },
+          {
+            "group": "DNS",
+            "expanded": true,
+            "pages": [
+              "api-reference/dns/activate-dns",
+              "api-reference/dns/add-a-record",
+              "api-reference/dns/modify-a-record",
+              "api-reference/dns/delete-a-record",
+              "api-reference/dns/add-aaaa-record",
+              "api-reference/dns/modify-aaaa-record",
+              "api-reference/dns/delete-aaaa-record",
+              "api-reference/dns/add-cname-record",
+              "api-reference/dns/modify-cname-record",
+              "api-reference/dns/delete-cname-record",
+              "api-reference/dns/add-mx-record",
+              "api-reference/dns/modify-mx-record",
+              "api-reference/dns/delete-mx-record",
+              "api-reference/dns/add-txt-record",
+              "api-reference/dns/modify-txt-record",
+              "api-reference/dns/delete-txt-record"
+            ]
+          },
+          {
+            "group": "Privacy Protection",
+            "expanded": true,
+            "pages": [
+              "purchase-privacy",
+              "enable-disable-privacy"
+            ]
+          },
+          {
+            "group": "Transfers",
+            "expanded": true,
+            "pages": [
+              "api-reference/domains/lock-unlock-domain-transfer",
+              "api-reference/domains/view-transfer-code",
+              "api-reference/domains/transfer-status",
+              "api-reference/domains/list-transfers"
+            ]
+          },
+          {
+            "group": "Premiums",
+            "expanded": true,
+            "pages": [
+              "fetch-pricing",
+              "registration",
+              "renewal"
+            ]
+          },
+          {
+            "group": "Miscellaneous",
+            "expanded": true,
+            "pages": [
+              "tld-pricing",
+              "coupon-codes"
+            ]
+          }
+        ]
+      },
+      {
+        "group": "Resources",
+        "expanded": true,
+        "pages": [
+          "rate-limits",
+          "TLD-catalogue",
+          "changelog",
+          "upcoming"
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": []
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "background": {
+    "color": {
+      "dark": "#000000"
+    }
+  },
+  "appearance": {
+    "toggle": true,
+    "default": "dark"
+  },
+  "logo": {
+    "light": "/images/namify-logo-black.svg",
+    "dark": "/images/namify-logo.svg"
+  },
+  "favicon": "/images/namify-favicon.png",
+  "fonts": {
+    "family": "Inter"
+  }
+}

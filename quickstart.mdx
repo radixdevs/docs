@@ -1,0 +1,133 @@
+---
+title: "Quickstart"
+description: "Zero to a registered domain in 4 API calls. This guide uses the sandbox - no charges, no real registrations."
+icon: "bolt"
+---
+
+<Note>
+  **Before you start:**
+
+  You'll need a Namify partner account ([request access here](mailto:partner@namify.tech)) and a sandbox API key (prefix: nk_test\_).
+
+  All examples in this guide use the sandbox. Nothing here costs money or touches real registrations.
+
+  Switch to production credentials only when you are ready to work with live data.
+</Note>
+
+<CardGroup cols={2}>
+  <Card color="#ff8700" icon="pencil" title="Sandbox">
+    **Base URL:** `https://dev.namify.host`\
+    **Purpose:** Testing and development in a safe environment with no real charges.
+  </Card>
+  <Card color="#03ff00" icon="code" title="Production">
+    **Base URL:** `https://namify.host`\
+    **Purpose:** Live domain purchases, renewals and domain management
+  </Card>
+</CardGroup>
+
+## Step 1: Search for a domain
+
+Start by checking whether the domain you want is available.
+
+```json
+curl -X GET "https://dev.namify.host/api/v1/domains/availability?search_term=janesbakery&tlds[]=com&tlds[]=store" \
+  -H "Authorization: Bearer nk_test_..."
+
+{
+  "results": [
+    {
+      "product_category": "domain_registration",
+      "domain_name": "janesbakery.com",
+      "sld": "janesbakery",
+      "tld": "com",
+      "available": true,
+      "premium": false
+    },
+    {
+      "product_category": "domain_registration",
+      "domain_name": "janesbakery.store",
+      "sld": "janesbakery",
+      "tld": "store",
+      "available": true,
+      "premium": false
+    }
+  ]
+}
+```
+
+## Step 2: Create a customer
+
+Every domain registration is tied to a customer. Create one to register the domain under.
+
+```shellscript
+curl -X POST https://dev.namify.host/api/v1/customers/signup \
+  -H "Authorization: Bearer nk_test_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Smith",
+    "company": "Janes Bakery",
+    "email": "jane@example.com",
+    "password": "SecureP@ss1",
+    "phone": "5551234567",
+    "country_code": "1",
+    "address": "123 Main St",
+    "city": "San Francisco",
+    "state": "California",
+    "zipcode": "94102",
+    "country": "US"
+  }'
+
+{
+  "message": "Customer created",
+  "customer_id": 85384231
+}
+```
+
+## Step 3: Register the domain
+
+Found something you like? Let's go ahead and make it yours.
+
+```json
+curl -X POST https://dev.namify.host/api/v1/domains/register \
+  -H "Authorization: Bearer nk_test_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": 85384231,
+    "domain_name": "janesbakery.com",
+    "duration": 1
+  }'
+
+{
+  "status": "SUCCESS",
+  "message": "Domain registered successfully",
+  "order_id": 124680932
+}
+```
+
+## Step 4: Verify
+
+Congratulations! You should see janesbakery.com with status "Active". That's it -\
+four calls from zero to a live custom domain.
+
+```json
+curl -X GET "https://dev.namify.host/api/v1/domains/orders?customer_id=85384231" \
+  -H "Authorization: Bearer nk_test_..."
+
+{
+  "total_orders": 1,
+  "orders_on_page": 1,
+  "orders": [
+    {
+      "order_id": 124680932,
+      "domain_name": "janesbakery.com",
+      "status": "Active",
+      "expiry": "Mar 5, 2027",
+      "expiry_timestamp": 1772726400
+    }
+  ]
+}
+```
+
+<Tip>
+  **Tip:** Ready for production? Swap nk_test\_ for nk_live\_ and change the base URL to namify.host. Same code, real domains.
+</Tip>

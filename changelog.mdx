@@ -1,0 +1,31 @@
+---
+title: "Changelog"
+icon: "clapperboard"
+---
+
+Dated entries tracking every API change. Entries are categorized as Added, Improved, Fixed, or Deprecated.
+
+## Versioning policy
+
+The API version is in the URL path (/v1/). Breaking changes increment the major version with at least 6 months of parallel support. Non-breaking additions (new fields, new endpoints) ship continuously without version bumps.
+
+## Format
+
+Each changelog entry follows this structure:
+
+```text
+## 2026-03-05
+
+### Added
+- GET /domains/suggestions endpoint for AI-generated domain alternatives.
+- include_suggestions parameter on GET /domains/search.
+
+### Improved
+- Domain search response time reduced to <200ms for single-TLD queries.
+
+### Fixed
+- 422 error now returns the specific missing field for TLD-restricted registrations.
+
+### Deprecated
+- None.
+```

@@ -1,0 +1,54 @@
+---
+title: "Hybrid"
+icon: "window"
+---
+
+The best of both worlds. You build a native registration & billing experience on your platform. When users register, you call our APIs - we handle billing, compliance, lifecycle management & support.
+
+<video src="/videos/autods.mp4" controls={true} />
+
+## What you build
+
+A native domain search (calling our Search API), a registration/checkout flow, and payment collection through your own billing system.
+
+## What Namify handles
+
+Registrar operations: the actual domain registration, renewal processing, ICANN compliance emails (registrant verification, WHOIS accuracy), transfer management, and dispute resolution.
+
+## Typical integration
+
+A "Get a domain" button or link in your product that redirects to the Namify hosted flow.
+
+<Steps>
+  <Step title="Search">
+    User searches for a domain in your product (you call `GET /domains/search`).
+  </Step>
+  <Step title="Selection">
+    User selects a domain and checks out (you collect payment via Stripe, Paddle, or your billing system if needed).
+  </Step>
+  <Step title="Notify">
+    Your backend calls `POST /domains/register` with the customer\_id and domain.
+  </Step>
+  <Step title="Registration">
+    Namify registers the domain and returns the result. You update the user's account.
+  </Step>
+  <Step title="Renewal">
+    Namify handles processing and fires webhooks. You update your records accordingly.
+  </Step>
+</Steps>
+
+## 🤖 Hybrid Integration, Supercharged with AI
+
+Combine manual control with AI-assisted speed.
+
+Copy specific API requests and use ChatGPT or Claude to generate only the parts you need — while keeping full flexibility over your implementation.
+
+Or use the built-in **“Ask a question…”** assistant to understand endpoints, refine logic, and accelerate development directly within the docs.
+
+## Customization
+
+Logo, primary brand color, favicon, and a custom return URL. Configure in Settings \> Hosted Flow on your Namify partner dashboard.
+
+<Tip>
+  **Variation:** If you don't want to handle domain-specific payments, enable hosted billing. Namify collects from your end users directly, handles dunning and retry logic, and pays you a revenue share monthly.
+</Tip>

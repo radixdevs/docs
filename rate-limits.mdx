@@ -1,0 +1,30 @@
+---
+title: "Rate Limits"
+icon: "traffic-light-stop"
+---
+
+Rate limits protect the platform and ensure fair usage. Limits are per API key.
+
+## Per-endpoint limits
+
+| **Domain search**       | 50 requests/second                          |
+| :---------------------- | :------------------------------------------ |
+| **Domain registration** | 10 requests/second                          |
+| **All other endpoints** | 10 requests/second                          |
+| **Burst allowance**     | Up to 2x the per-second limit for 5 seconds |
+
+## Response headers
+
+| **X-RateLimit-Limit**     | Max requests per window.                  |
+| :------------------------ | :---------------------------------------- |
+| **X-RateLimit-Remaining** | Requests remaining in the current window. |
+| **X-RateLimit-Reset**     | Unix timestamp when the window resets.    |
+| **Retry-After**           | Seconds to wait (only on 429 responses).  |
+
+## Handling 429
+
+When you receive a 429 Too Many Requests, stop sending requests and wait for the number of seconds in the Retry-After header. Implement exponential backoff with jitter to avoid thundering-herd problems when your rate limit resets.
+
+## Need higher limits?
+
+Contact your partner manager or email [partner@namify.tech](mailto:partner@namify.tech) before high-traffic events (product launches, promotions). We can temporarily raise limits with advance notice.

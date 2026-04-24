@@ -1,0 +1,82 @@
+---
+title: "API Overview"
+description: "The Namify API is a RESTful JSON API over HTTPS. All requests and responses use JSON. The API is versioned in the URL path."
+icon: "book-open-cover"
+---
+
+<CardGroup cols={2}>
+  <Card title="Sandbox" color="#ff8700" icon="pencil">
+    **Base URL:** `https://dev.namify.host`\
+    **Purpose:** Testing and development in a safe environment with no real charges.
+  </Card>
+
+  <Card title="Production" color="#03ff00" icon="code">
+    **Base URL:** `https://namify.host`\
+    **Purpose:** Live domain purchases, renewals and domain management
+  </Card>
+</CardGroup>
+
+<Tip>
+  **AI-Ready Documentation**
+
+  Copy any endpoint and use ChatGPT or Claude to generate production-ready code — or use the\
+  **“Ask a question…”** for instant answers inside the docs.
+</Tip>
+
+## Versioning
+
+The version is embedded in the URL path (/v1/). Breaking changes increment the major version with at least 6 months of parallel support. Non-breaking changes (new fields, new endpoints) ship continuously.
+
+## Request format
+
+All request bodies must be JSON with Content-Type: application/json. Query parameters are used for filtering and pagination on GET requests.
+
+## Response structure
+
+Response shapes vary by endpoint. Most successful responses return a flat JSON object:
+
+```json
+// Action response (e.g. register, renew, DNS)
+{ "status": "SUCCESS", "message": "Domain registered successfully", "order_id": 124680932 }
+
+// Creation response (e.g. customer signup)
+{ "message": "Customer created", "customer_id": 85384231 }
+
+// List response (e.g. domain orders)
+{ "total_orders": 42, "orders_on_page": 10, "orders": [ ... ] }
+```
+
+Error responses return a `message` field. Errors originating from the upstream registrar also include a `status` field:
+
+```json
+// Validation or auth error
+{ "message": "The search term field is required." }
+
+// Upstream registrar error
+{ "status": "ERROR", "message": "Invalid order ID" }
+```
+
+## Pagination
+
+The `/api/v1/domains/orders` endpoint is the only paginated endpoint. It uses page-based pagination via the `page` query parameter (defaults to `1`). The response includes `total_orders` (total matching records) and `orders_on_page` (count on the current page).
+
+## Common headers
+
+| Type | Description |
+| --- | --- |
+| Authorization | Bearer `nk_live_` or `Bearer nk_test_` |
+| Content-Type | Application/json (required on `POST PUT PATCH`) |
+| X-RateLimit-Remaining | Requests remaining in the current window. |
+| X-RateLimit-Reset | Unix timestamp when the window resets. |
+
+## HTTP status codes
+
+| Code | Description |
+| --- | --- |
+| 200 | Success. |
+| 201 | Resource created (e.g. customer signup). |
+| 400 | Upstream request error. |
+| 401 | Unauthorized. API key is missing or invalid. |
+| 422 | Unprocessable. Validation failed or the registrar rejected the request. |
+| 500 | Unexpected server error. |
+| 502 | Upstream registrar returned an unexpected or unparseable response. |
