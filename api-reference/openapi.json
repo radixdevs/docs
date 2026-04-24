@@ -379,6 +379,72 @@
 			}
 		},
 
+		"/api/v1/customers/auto-login": {
+			"post": {
+				"tags": ["Customers"],
+				"summary": "Generate an auto-login token",
+				"description": "Generates a short-lived authentication token for an existing customer account, identified by their email address.\n\n**Use case:** Pass the returned `token` as a query parameter in the auto-login redirect URL to log the customer into their account without requiring a password. This is intended for partner-initiated flows — for example, redirecting a customer from your platform directly into their Namify control panel.\n\n**Token expiry:** Tokens are valid for a short window. Redirect the customer immediately after calling this endpoint — do not store or reuse the token.\n\n**Customer requirement:** The email must match an account previously created via `POST /api/v1/customers/signup`. Submitting an unregistered email returns a `422` error.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["email"],
+								"properties": {
+									"email": {
+										"type": "string",
+										"format": "email",
+										"description": "Email address of the customer to generate a token for. Must match an existing customer account created via `POST /api/v1/customers/signup`.",
+										"example": "john.doe@example.com"
+									}
+								}
+							},
+							"example": {
+								"email": "john.doe@example.com"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Token generated successfully. Use the returned `token` in the auto-login redirect URL immediately — it expires shortly after issuance.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/AutoLoginResponse" },
+								"example": {
+									"status": "SUCCESS",
+									"email": "john.doe@example.com",
+									"token": "214844e15411d2f6e72b274ca199760656218b57e5329243ce23e6ad7c2e1c97",
+									"expires_at": "2026-04-24 09:48:34"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "The API key is missing or does not correspond to a known partner.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The supplied email address does not match any existing customer account.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"example": {
+									"status": "ERROR",
+									"message": "Invalid customer email"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+
 		"/api/v1/customers/details": {
 			"get": {
 				"tags": ["Customers"],
@@ -1393,6 +1459,15 @@
 					"tld": { "type": "string", "description": "Top-level domain extension (without leading dot).", "example": "com" },
 					"available": { "type": "boolean", "description": "`true` if the domain is available for registration. `false` if it is already registered or if it is a premium domain on an account that does not support premium registrations.", "example": true },
 					"premium": { "type": "boolean", "description": "`true` if this is a premium domain carrying a higher-than-standard registration price. Premium domains currently cannot be registered through this API.", "example": false }
+				}
+			},
+			"AutoLoginResponse": {
+				"type": "object",
+				"properties": {
+					"status": { "type": "string", "example": "SUCCESS" },
+					"email": { "type": "string", "format": "email", "description": "The customer email address the token was issued for.", "example": "john.doe@example.com" },
+					"token": { "type": "string", "description": "Authentication token to be passed as a query parameter in the auto-login redirect URL. Valid for a short window — redirect the customer immediately.", "example": "214844e15411d2f6e72b274ca199760656218b57e5329243ce23e6ad7c2e1c97" },
+					"expires_at": { "type": "string", "description": "UTC datetime when the token expires, formatted as YYYY-MM-DD HH:MM:SS. The customer must be redirected before this time.", "example": "2026-04-24 09:48:34" }
 				}
 			},
 			"SignupResponse": {
