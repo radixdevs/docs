@@ -44,8 +44,7 @@
               "api-reference/customer/remove-customer",
               "api-reference/customer/all-customers",
               "api-reference/customer/countries-json",
-              "api-reference/customer/auto-login-token",
-              "api-reference/customer/auto-login-redirect"
+              "api-reference/customer/auto-login-token"
             ]
           },
           {
