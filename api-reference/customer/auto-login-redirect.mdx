@@ -1,0 +1,42 @@
+---
+title: "Auto-Login Redirect"
+description: "Redirect a customer into an authenticated session using a short-lived token."
+---
+
+<Info>
+  This is not a REST API endpoint. It is a browser redirect URL — no `Authorization` header or API key is required.
+</Info>
+
+## Overview
+
+After generating a token via [`POST /api/v1/customers/auto-login`](/api-reference/customers/auto-login), redirect your customer's browser to the following URL to log them in without a password:
+
+https://{your-subdomain}.namify.tech/auto-login?token={token}
+
+Replace `{your-subdomain}` with your partner-specific subdomain (e.g. `doha`, `acme`) and `{token}` with the value returned by the token endpoint.
+
+## Parameters
+
+<ParamField query="token" type="string" required>
+  The authentication token returned by `POST /api/v1/customers/auto-login`. Tokens are short-lived — redirect the customer immediately after generating one.
+</ParamField>
+
+## How to use it
+
+<Steps>
+  <Step title="Generate a token">
+    Call `POST /api/v1/customers/auto-login` with the customer's email address. On success you will receive a `token` and an `expires_at` timestamp.
+  </Step>
+  <Step title="Redirect the customer's browser">
+    Immediately redirect the customer to the auto-login URL with the token appended as a query parameter.
+
+    ```
+    https://partner.namify.tech/auto-login?token=214844e15411d2f6e72b274ca199760656218b57e5329243ce23e6ad7c2e1c97
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Tokens expire shortly after issuance. Do not store or reuse them — generate a fresh token each time you need to redirect a customer.
+</Warning>
+
