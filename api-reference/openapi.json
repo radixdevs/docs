@@ -878,12 +878,60 @@
 		"/api/v1/transfers/auth-code": {
 			"get": {
 				"tags": ["Transfers"],
-				"summary": "View transfer code",
-				"description": "Retrieves the EPP authorization code required to transfer a domain to another registrar.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"summary": "Get transfer auth code",
+				"description": "Retrieves the EPP authorization code (also known as the auth code or transfer secret) required to transfer a domain to another registrar.",
+				"parameters": [
+					{
+						"name": "order_id",
+						"in": "query",
+						"required": true,
+						"schema": { "type": "integer" },
+						"description": "Order ID of the domain.",
+						"example": 124680932
+					}
+				],
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "Transfer auth code retrieved successfully.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+										"transfer_code": { "type": "string", "description": "EPP authorization code required to transfer the domain to another registrar.", "example": "Ab1#Xy9!Zq2" }
+									}
+								},
+								"example": { "order_id": 124680932, "transfer_code": "Ab1#Xy9!Zq2" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream provider returned an error. The `message` field contains the reason.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "Upstream provider error",
+										"value": { "status": "ERROR", "message": "Get domain transfer code failed" }
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		},
@@ -933,6 +981,82 @@
 				"x-playground": "none",
 				"responses": {
 					"200": { "description": "Coming soon." }
+				}
+			}
+		},
+
+		"/api/v1/dns/dns-records": {
+			"get": {
+				"tags": ["DNS"],
+				"summary": "Get DNS records",
+				"description": "Returns DNS records for a domain. Use `record_type` to filter by type — defaults to `A` if omitted. Supported types: `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, `SRV`, `SOA`.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be retrieved.",
+				"parameters": [
+					{
+						"name": "order_id",
+						"in": "query",
+						"required": true,
+						"schema": { "type": "integer" },
+						"description": "Order ID of the domain.",
+						"example": 124680932
+					},
+					{
+						"name": "record_type",
+						"in": "query",
+						"required": false,
+						"schema": { "type": "string", "enum": ["A","AAAA","CNAME","MX","TXT","NS","SRV","SOA"] },
+						"description": "Filter records by type. Defaults to `A` if omitted.",
+						"example": "A"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "DNS records retrieved successfully.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"dns_records": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"type": { "type": "string", "description": "Record type (e.g. `A`, `MX`, `TXT`).", "example": "A" },
+													"host": { "type": "string", "description": "Subdomain label relative to the zone.", "example": "www" },
+													"value": { "type": "string", "description": "Record value (IP address, hostname, or text content).", "example": "203.0.113.10" },
+													"time_to_live": { "type": "integer", "description": "TTL in seconds.", "example": 3600 },
+													"status": { "type": "string", "description": "Record status as reported by the DNS provider.", "example": "Active" },
+													"priority": { "type": "integer", "description": "Priority value. Present for MX and SRV records only.", "example": 10 }
+												}
+											}
+										}
+									}
+								},
+								"example": {
+									"dns_records": [
+										{ "type": "A", "host": "www", "value": "203.0.113.10", "time_to_live": 3600, "status": "Active" }
+									]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner. The `message` field contains the reason.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"example": { "status": "ERROR", "message": "Invalid order ID" }
+							}
+						}
+					}
 				}
 			}
 		},
@@ -1001,21 +1125,121 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify an A record",
-				"description": "Modifies an existing A record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Modifies an existing A record on the domain's DNS zone.\n\n**current_value:** The exact IPv4 address of the record you want to modify.\n\n**new_value:** The replacement IPv4 address.\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex domain.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","current_value","new_value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"current_value": { "type": "string", "description": "The existing IPv4 address of the record to modify.", "example": "203.0.113.10" },
+									"new_value": { "type": "string", "description": "The replacement IPv4 address.", "example": "203.0.113.20" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone (e.g. `www`, `blog`). Use `@` or omit for the apex domain.", "example": "www" },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "current_value": "203.0.113.10", "new_value": "203.0.113.20", "host": "www" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "A record modified successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record modified successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to modify the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			},
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete an A record",
-				"description": "Deletes an A record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Deletes an A record from the domain's DNS zone.\n\n**value:** The exact IPv4 address of the record to delete.\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex domain.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "The IPv4 address of the record to delete.", "example": "203.0.113.10" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone (e.g. `www`, `blog`). Use `@` or omit for the apex domain.", "example": "www" }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "203.0.113.10", "host": "www" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "A record deleted successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record deleted successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to delete the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		},
@@ -1084,21 +1308,121 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify an AAAA record",
-				"description": "Modifies an existing AAAA record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Modifies an existing AAAA record on the domain's DNS zone.\n\n**current_value:** The exact IPv6 address of the record you want to modify.\n\n**new_value:** The replacement IPv6 address.\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex domain.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","current_value","new_value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"current_value": { "type": "string", "description": "The existing IPv6 address of the record to modify.", "example": "2001:db8:3333:4444:5555:6666:7777:8888" },
+									"new_value": { "type": "string", "description": "The replacement IPv6 address.", "example": "2001:db8:aaaa:bbbb:cccc:dddd:eeee:ffff" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone (e.g. `www`, `mail`). Use `@` or omit for the apex domain.", "example": "www" },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "current_value": "2001:db8:3333:4444:5555:6666:7777:8888", "new_value": "2001:db8:aaaa:bbbb:cccc:dddd:eeee:ffff", "host": "www" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "AAAA record modified successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record modified successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to modify the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			},
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete an AAAA record",
-				"description": "Deletes an AAAA record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Deletes an AAAA record from the domain's DNS zone.\n\n**value:** The exact IPv6 address of the record to delete.\n\n**host:** The subdomain label relative to the zone (required).",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value","host"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "The IPv6 address of the record to delete.", "example": "2001:db8:3333:4444:5555:6666:7777:8888" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone (e.g. `www`, `mail`).", "example": "www" }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "2001:db8:3333:4444:5555:6666:7777:8888", "host": "www" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "AAAA record deleted successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record deleted successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to delete the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		},
@@ -1167,21 +1491,121 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify a CNAME record",
-				"description": "Modifies an existing CNAME record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Modifies an existing CNAME record on the domain's DNS zone.\n\n**current_value:** The exact target hostname of the record you want to modify.\n\n**new_value:** The replacement target hostname.\n\n**host:** The subdomain label being aliased, relative to the zone.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","current_value","new_value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"current_value": { "type": "string", "description": "The existing target hostname of the record to modify.", "example": "old-target.example.com" },
+									"new_value": { "type": "string", "description": "The replacement target hostname (fully qualified domain name).", "example": "new-target.example.com" },
+									"host": { "type": "string", "description": "Subdomain label being aliased, relative to the zone (e.g. `www`, `shop`).", "example": "www" },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "current_value": "old-target.example.com", "new_value": "new-target.example.com", "host": "www" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "CNAME record modified successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record modified successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to modify the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			},
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete a CNAME record",
-				"description": "Deletes a CNAME record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Deletes a CNAME record from the domain's DNS zone.\n\n**value:** The exact target hostname of the record to delete.\n\n**host:** The subdomain label being aliased, relative to the zone (required).",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value","host"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "The target hostname of the record to delete (fully qualified domain name).", "example": "target.example.com" },
+									"host": { "type": "string", "description": "Subdomain label being aliased, relative to the zone (e.g. `www`, `shop`).", "example": "www" }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "target.example.com", "host": "www" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "CNAME record deleted successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record deleted successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to delete the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		},
@@ -1251,21 +1675,122 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify an MX record",
-				"description": "Modifies an existing MX record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Modifies an existing MX record on the domain's DNS zone.\n\n**current_value:** The exact mail server hostname of the record you want to modify.\n\n**new_value:** The replacement mail server hostname.\n\n**host:** The domain or subdomain receiving mail, relative to the zone. Use `@` or omit for the root domain.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","current_value","new_value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"current_value": { "type": "string", "description": "The existing mail server hostname of the record to modify.", "example": "aspmx.l.google.com" },
+									"new_value": { "type": "string", "description": "The replacement mail server hostname (fully qualified).", "example": "mail.example.com" },
+									"host": { "type": "string", "description": "Domain or subdomain receiving mail, relative to the zone. Use `@` or omit for the root domain.", "example": "@" },
+									"priority": { "type": "integer", "description": "Mail server priority. Lower values are preferred. Common values: 10 (primary), 20 (secondary).", "example": 10 },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "current_value": "aspmx.l.google.com", "new_value": "mail.example.com", "host": "@", "priority": 10 }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "MX record modified successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record modified successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to modify the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			},
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete an MX record",
-				"description": "Deletes an MX record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Deletes an MX record from the domain's DNS zone.\n\n**value:** The exact mail server hostname of the record to delete.\n\n**host:** The domain or subdomain receiving mail, relative to the zone (required).",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value","host"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "The mail server hostname of the record to delete (fully qualified).", "example": "aspmx.l.google.com" },
+									"host": { "type": "string", "description": "Domain or subdomain receiving mail, relative to the zone (e.g. `@`).", "example": "@" }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "aspmx.l.google.com", "host": "@" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "MX record deleted successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record deleted successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to delete the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		},
@@ -1347,21 +1872,121 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify a TXT record",
-				"description": "Modifies an existing TXT record on the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Modifies an existing TXT record on the domain's DNS zone.\n\n**current_value:** The exact text content of the record you want to modify.\n\n**new_value:** The replacement text content.\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","current_value","new_value"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"current_value": { "type": "string", "description": "The existing text content of the record to modify.", "example": "v=spf1 include:_spf.google.com ~all" },
+									"new_value": { "type": "string", "description": "The replacement text content.", "example": "v=spf1 include:_spf.google.com include:sendgrid.net ~all" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone. Use `@` or omit for the apex, or a specific label for targeted records (e.g. `_dmarc`, `google._domainkey`).", "example": "@" },
+									"time_to_live": { "type": "integer", "description": "TTL in seconds. Minimum 300. Omit to use the zone default.", "example": 300 }
+								}
+							},
+							"example": { "order_id": 124680932, "current_value": "v=spf1 include:_spf.google.com ~all", "new_value": "v=spf1 include:_spf.google.com include:sendgrid.net ~all", "host": "@" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "TXT record modified successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record modified successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to modify the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			},
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete a TXT record",
-				"description": "Deletes a TXT record from the domain's DNS zone.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Deletes a TXT record from the domain's DNS zone.\n\n**value:** The exact text content of the record to delete.\n\n**host:** The subdomain label relative to the zone (required).",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["order_id","value","host"],
+								"properties": {
+									"order_id": { "type": "integer", "description": "Order ID of the domain.", "example": 124680932 },
+									"value": { "type": "string", "description": "The text content of the record to delete.", "example": "v=spf1 include:_spf.google.com ~all" },
+									"host": { "type": "string", "description": "Subdomain label relative to the zone. Use `@` for the apex, or a specific label for targeted records (e.g. `_dmarc`, `google._domainkey`).", "example": "@" }
+								}
+							},
+							"example": { "order_id": 124680932, "value": "v=spf1 include:_spf.google.com ~all", "host": "@" }
+						}
+					}
+				},
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "TXT record deleted successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/DnsRecordResponse" },
+								"example": { "status": "SUCCESS", "message": "Record deleted successfully" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The `order_id` does not belong to this partner, or the upstream DNS provider rejected the request. The `message` field contains the reason — either `Invalid order ID` or a descriptive error from the DNS provider.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"examples": {
+									"invalid_order": {
+										"summary": "Unknown or unauthorised order ID",
+										"value": { "status": "ERROR", "message": "Invalid order ID" }
+									},
+									"upstream_rejection": {
+										"summary": "DNS provider rejected the request",
+										"value": { "status": "ERROR", "message": "Failed to delete the record" }
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		},
@@ -1409,11 +2034,88 @@
 			"get": {
 				"tags": ["Miscellaneous"],
 				"summary": "Get pricing",
-				"description": "Returns registration, renewal, and restore pricing for available TLDs.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Returns your partner pricing for all configured TLDs and privacy protection.\n\nEach TLD entry is keyed by its slug (e.g. `dotcom`, `dotstore`) and contains pricing broken down by operation and duration. Duration keys are integers representing years (for `register`, `renew`, `transfer`, `restore`) or months (for `register_monthly`, `renew_monthly`), and values are the price in USD.\n\n`privacy_protection` is returned as a flat annual price in USD.",
 				"responses": {
-					"200": { "description": "Coming soon." }
+					"200": {
+						"description": "Pricing retrieved successfully.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"description": "An object keyed by TLD slug (e.g. `dotcom`, `dotstore`) plus `privacy_protection`.",
+									"additionalProperties": {
+										"oneOf": [
+											{
+												"type": "object",
+												"description": "Pricing breakdown for a TLD.",
+												"properties": {
+													"register": {
+														"type": "object",
+														"description": "Registration prices keyed by duration in years.",
+														"additionalProperties": { "type": "number" },
+														"example": { "1": 15, "2": 30, "5": 75, "10": 150 }
+													},
+													"renew": {
+														"type": "object",
+														"description": "Renewal prices keyed by duration in years.",
+														"additionalProperties": { "type": "number" },
+														"example": { "1": 15, "2": 30, "5": 75, "10": 150 }
+													},
+													"transfer": {
+														"type": "object",
+														"description": "Transfer price keyed by duration in years.",
+														"additionalProperties": { "type": "number" },
+														"example": { "1": 15 }
+													},
+													"restore": {
+														"type": "object",
+														"description": "Restore (redemption) price keyed by duration in years.",
+														"additionalProperties": { "type": "number" },
+														"example": { "1": 170 }
+													},
+													"register_monthly": {
+														"type": "object",
+														"description": "Monthly registration prices keyed by duration in months. Present only for TLDs that support monthly billing.",
+														"additionalProperties": { "type": "number" },
+														"example": { "1": 2.99, "6": 3.49, "11": 3.49 }
+													},
+													"renew_monthly": {
+														"type": "object",
+														"description": "Monthly renewal prices keyed by duration in months. Present only for TLDs that support monthly billing.",
+														"additionalProperties": { "type": "number" },
+														"example": { "1": 3.49, "6": 3.49, "11": 3.49 }
+													}
+												}
+											},
+											{
+												"type": "number",
+												"description": "Annual price in USD. Used for `privacy_protection`."
+											}
+										]
+									}
+								},
+								"example": {
+									"dotstore": {
+										"register": { "1": 65, "2": 65, "5": 65, "10": 65 },
+										"renew": { "1": 65, "2": 65, "5": 65, "10": 65 },
+										"transfer": { "1": 65 },
+										"restore": { "1": 170 },
+										"register_monthly": { "1": 2.99, "6": 3.49, "11": 3.49 },
+										"renew_monthly": { "1": 3.49, "6": 3.49, "11": 3.49 }
+									},
+									"privacy_protection": 6
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					}
 				}
 			}
 		},
