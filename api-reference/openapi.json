@@ -1065,7 +1065,7 @@
 			"post": {
 				"tags": ["DNS"],
 				"summary": "Add an A record",
-				"description": "Adds an A record to the domain's DNS zone, mapping a hostname to an IPv4 address.\n\n**Use case:** Point your domain or subdomain to a server's IPv4 address (e.g. point `www.example.com` → `203.0.113.10`).\n\n**host:** The subdomain label relative to the domain zone. Use `@` or omit to target the apex domain. Use a label like `www` or `blog` for subdomains.\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"description": "Adds an A record to the domain's DNS zone, mapping a hostname to an IPv4 address.\n\n**Use case:** Point your domain or subdomain to a server's IPv4 address (e.g. point `www.example.com` → `203.0.113.10`).\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1125,7 +1125,7 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify an A record",
-				"description": "Modifies an existing A record on the domain's DNS zone.\n\n**current_value:** The exact IPv4 address of the record you want to modify.\n\n**new_value:** The replacement IPv4 address.\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex domain.",
+				"description": "Modifies an existing A record on the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1186,7 +1186,7 @@
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete an A record",
-				"description": "Deletes an A record from the domain's DNS zone.\n\n**value:** The exact IPv4 address of the record to delete.\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex domain.",
+				"description": "Deletes an A record from the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1248,7 +1248,7 @@
 			"post": {
 				"tags": ["DNS"],
 				"summary": "Add an AAAA record",
-				"description": "Adds an AAAA record to the domain's DNS zone, mapping a hostname to an IPv6 address.\n\n**Use case:** Point your domain or subdomain to a server's IPv6 address for IPv6-capable networks.\n\n**host:** The subdomain label relative to the domain zone. Use `@` or omit to target the apex domain. Use a label like `www` or `mail` for subdomains.\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"description": "Adds an AAAA record to the domain's DNS zone, mapping a hostname to an IPv6 address.\n\n**Use case:** Point your domain or subdomain to a server's IPv6 address for IPv6-capable networks.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1308,7 +1308,7 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify an AAAA record",
-				"description": "Modifies an existing AAAA record on the domain's DNS zone.\n\n**current_value:** The exact IPv6 address of the record you want to modify.\n\n**new_value:** The replacement IPv6 address.\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex domain.",
+				"description": "Modifies an existing AAAA record on the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1369,7 +1369,7 @@
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete an AAAA record",
-				"description": "Deletes an AAAA record from the domain's DNS zone.\n\n**value:** The exact IPv6 address of the record to delete.\n\n**host:** The subdomain label relative to the zone (required).",
+				"description": "Deletes an AAAA record from the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1431,7 +1431,7 @@
 			"post": {
 				"tags": ["DNS"],
 				"summary": "Add a CNAME record",
-				"description": "Adds a CNAME (Canonical Name) record to the domain's DNS zone, aliasing one hostname to another.\n\n**Use case:** Alias a subdomain to another hostname — for example, point `www.example.com` → `example.com`, or point `shop.example.com` → a third-party platform's domain.\n\n**host:** The subdomain label being aliased (relative to the zone). Use a label like `www` or `shop`. CNAME records cannot be set on the apex domain (`@`) — use an A record for that.\n\n**value:** The target hostname the alias should resolve to (fully qualified, e.g. `target.example.com`).\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"description": "Adds a CNAME (Canonical Name) record to the domain's DNS zone, aliasing one hostname to another.\n\n**Use case:** Alias a subdomain to another hostname — for example, point `www.example.com` → `example.com`, or point `shop.example.com` → a third-party platform's domain.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1491,7 +1491,7 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify a CNAME record",
-				"description": "Modifies an existing CNAME record on the domain's DNS zone.\n\n**current_value:** The exact target hostname of the record you want to modify.\n\n**new_value:** The replacement target hostname.\n\n**host:** The subdomain label being aliased, relative to the zone.",
+				"description": "Modifies an existing CNAME record on the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1552,7 +1552,7 @@
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete a CNAME record",
-				"description": "Deletes a CNAME record from the domain's DNS zone.\n\n**value:** The exact target hostname of the record to delete.\n\n**host:** The subdomain label being aliased, relative to the zone (required).",
+				"description": "Deletes a CNAME record from the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1614,7 +1614,7 @@
 			"post": {
 				"tags": ["DNS"],
 				"summary": "Add an MX record",
-				"description": "Adds an MX (Mail Exchanger) record to the domain's DNS zone, directing inbound email to a mail server.\n\n**Use case:** Route email for the domain to a mail server — for example, to configure Google Workspace, Microsoft 365, or a custom mail server.\n\n**host:** The domain or subdomain receiving mail, relative to the zone. Use `@` or omit to configure mail for the root domain. Use a subdomain label (e.g. `mail`) for subdomain-specific routing.\n\n**value:** The fully qualified hostname of the mail server (e.g. `mail.example.com` or `aspmx.l.google.com`).\n\n**priority:** Determines mail server preference when multiple MX records exist. Lower values have higher priority (e.g. `10` is preferred over `20`). Omit to use the default.\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"description": "Adds an MX (Mail Exchanger) record to the domain's DNS zone, directing inbound email to a mail server.\n\n**Use case:** Route email for the domain to a mail server — for example, to configure Google Workspace, Microsoft 365, or a custom mail server.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1675,7 +1675,7 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify an MX record",
-				"description": "Modifies an existing MX record on the domain's DNS zone.\n\n**current_value:** The exact mail server hostname of the record you want to modify.\n\n**new_value:** The replacement mail server hostname.\n\n**host:** The domain or subdomain receiving mail, relative to the zone. Use `@` or omit for the root domain.",
+				"description": "Modifies an existing MX record on the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1737,7 +1737,7 @@
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete an MX record",
-				"description": "Deletes an MX record from the domain's DNS zone.\n\n**value:** The exact mail server hostname of the record to delete.\n\n**host:** The domain or subdomain receiving mail, relative to the zone (required).",
+				"description": "Deletes an MX record from the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1799,7 +1799,7 @@
 			"post": {
 				"tags": ["DNS"],
 				"summary": "Add a TXT record",
-				"description": "Adds a TXT record to the domain's DNS zone. TXT records store arbitrary text data and are widely used for domain verification and email authentication.\n\n**Common use cases:**\n- **Domain verification:** Prove ownership to Google Search Console, Stripe, and similar services (e.g. `google-site-verification=abc123`).\n- **SPF:** Define authorised mail senders to reduce spam (e.g. `v=spf1 include:_spf.google.com ~all`).\n- **DKIM:** Publish a public key for email signing (typically on a `selector._domainkey` host).\n- **DMARC:** Set email authentication policy (typically on `_dmarc` host).\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex. Use a specific label for subdomain-targeted records (e.g. `_dmarc`, `google._domainkey`).\n\n**TTL:** Controls how long resolvers cache the record. Minimum is 300 seconds (5 minutes). Omit to use the zone default.\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
+				"description": "Adds a TXT record to the domain's DNS zone. TXT records store arbitrary text data and are widely used for domain verification and email authentication.\n\n**Common use cases:**\n- **Domain verification:** Prove ownership to Google Search Console, Stripe, and similar services (e.g. `google-site-verification=abc123`).\n- **SPF:** Define authorised mail senders to reduce spam (e.g. `v=spf1 include:_spf.google.com ~all`).\n- **DKIM:** Publish a public key for email signing (typically on a `selector._domainkey` host).\n- **DMARC:** Set email authentication policy (typically on `_dmarc` host).\n\n**Prerequisite:** DNS service must be activated for the domain via `POST /api/v1/dns/activate` before records can be added.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1872,7 +1872,7 @@
 			"put": {
 				"tags": ["DNS"],
 				"summary": "Modify a TXT record",
-				"description": "Modifies an existing TXT record on the domain's DNS zone.\n\n**current_value:** The exact text content of the record you want to modify.\n\n**new_value:** The replacement text content.\n\n**host:** The subdomain label relative to the zone. Use `@` or omit for the apex.",
+				"description": "Modifies an existing TXT record on the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1933,7 +1933,7 @@
 			"delete": {
 				"tags": ["DNS"],
 				"summary": "Delete a TXT record",
-				"description": "Deletes a TXT record from the domain's DNS zone.\n\n**value:** The exact text content of the record to delete.\n\n**host:** The subdomain label relative to the zone (required).",
+				"description": "Deletes a TXT record from the domain's DNS zone.",
 				"requestBody": {
 					"required": true,
 					"content": {
