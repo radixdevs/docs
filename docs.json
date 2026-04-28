@@ -74,6 +74,7 @@
             "expanded": true,
             "pages": [
               "api-reference/dns/activate-dns",
+              "api-reference/dns/view-dns-records",
               "api-reference/dns/add-a-record",
               "api-reference/dns/modify-a-record",
               "api-reference/dns/delete-a-record",
