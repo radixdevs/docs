@@ -61,6 +61,7 @@
             "pages": [
               "api-reference/domains/availability",
               "api-reference/domains/suggestions",
+              "api-reference/domains/supersonic",
               "api-reference/domains/registration",
               "api-reference/domains/renewal",
               "api-reference/domains/orders",
