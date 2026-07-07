@@ -1,0 +1,327 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Namify SuperSonic API",
+		"description": "SuperSonic returns a ranked set of available domains for a search term — the exact match, available alternatives, and optional AI-generated suggestions — each with live pricing.\n\nAll requests require a bearer token issued for your partner account. Results (TLDs and pricing) are scoped to your account's configured catalogue.\n\n**Base URL:** `https://supersonic.namify.host`",
+		"version": "1.0.0",
+		"license": {
+			"name": "MIT"
+		}
+	},
+	"servers": [
+		{
+			"url": "https://supersonic.namify.host"
+		}
+	],
+	"security": [
+		{
+			"bearerAuth": []
+		}
+	],
+	"paths": {
+		"/v1/search": {
+			"get": {
+				"tags": ["Domains"],
+				"summary": "SuperSonic domain search",
+				"description": "Search a name and receive a ranked set of domains — the exact match, available alternatives, and (optionally) AI-generated suggestions — each with live pricing. The response leads with a featured result (`type: \"hero\"`), followed by the results list, and a trailing block of AI suggestions when `aisuggest=true`.",
+				"parameters": [
+					{
+						"name": "search_term",
+						"in": "query",
+						"required": true,
+						"description": "The name or domain to search. Either a bare name (`coffee`) or a full domain including a TLD (`coffee.com`). Maximum 63 characters.",
+						"schema": {
+							"type": "string",
+							"example": "coffee"
+						}
+					},
+					{
+						"name": "autosuggest",
+						"in": "query",
+						"required": false,
+						"description": "When `true`, include alternative available names in the results list. Defaults to `false`.",
+						"schema": {
+							"type": "boolean",
+							"default": false,
+							"example": true
+						}
+					},
+					{
+						"name": "aisuggest",
+						"in": "query",
+						"required": false,
+						"description": "When `true`, append a block of AI-generated brandable suggestions after the results list. Defaults to `false`.",
+						"schema": {
+							"type": "boolean",
+							"default": false,
+							"example": true
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Ranked search results with live availability and pricing.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/SearchResponse" },
+								"example": {
+									"results": [
+										{
+											"domain_name": "mycafe.store",
+											"sld": "mycafe",
+											"tld": "store",
+											"available": true,
+											"type": "hero",
+											"is_searched_exact": false,
+											"pricing": {
+												"currency": "USD",
+												"register": 0,
+												"renew": 9.99,
+												"period": "year",
+												"is_free_first_year": true,
+												"summary": "1st Year Free, then $9.99/yr"
+											}
+										},
+										{
+											"domain_name": "mycafe.com",
+											"sld": "mycafe",
+											"tld": "com",
+											"available": true,
+											"type": "result",
+											"is_searched_exact": false,
+											"pricing": {
+												"currency": "USD",
+												"register": 12.99,
+												"renew": 14.99,
+												"period": "year",
+												"is_free_first_year": false,
+												"summary": "$12.99/yr"
+											}
+										},
+										{
+											"domain_name": "mycafehq.store",
+											"sld": "mycafehq",
+											"tld": "store",
+											"available": true,
+											"type": "ai_suggestion",
+											"is_searched_exact": false,
+											"pricing": {
+												"currency": "USD",
+												"register": 0,
+												"renew": 9.99,
+												"period": "year",
+												"is_free_first_year": true,
+												"summary": "1st Year Free, then $9.99/yr"
+											}
+										}
+									],
+									"results_total": 8,
+									"results_hidden": 0,
+									"meta": {
+										"search_term": "mycafe",
+										"typed_tld": null,
+										"autosuggest": true,
+										"aisuggest": true
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "`search_term` is missing, empty, or longer than 63 characters.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorServer" }
+							}
+						}
+					},
+					"503": {
+						"description": "The domain availability service is temporarily unavailable.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnavailable" }
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"bearerAuth": {
+				"type": "http",
+				"scheme": "bearer",
+				"description": "Your partner API key. Include it in the Authorization header as `Bearer <token>`. Unauthenticated requests return 401 Unauthorized."
+			}
+		},
+		"schemas": {
+			"SearchResponse": {
+				"type": "object",
+				"properties": {
+					"results": {
+						"type": "array",
+						"description": "The full result set — never paginated.",
+						"items": { "$ref": "#/components/schemas/DomainResult" }
+					},
+					"results_total": {
+						"type": "integer",
+						"description": "Total number of results-list items."
+					},
+					"results_hidden": {
+						"type": "integer",
+						"description": "Results-list items beyond the first 10 (use to drive a \"show more\" affordance)."
+					},
+					"message": {
+						"type": "string",
+						"description": "Present only when there are no results (e.g. \"No results for this name\")."
+					},
+					"meta": { "$ref": "#/components/schemas/Meta" }
+				}
+			},
+			"DomainResult": {
+				"type": "object",
+				"properties": {
+					"domain_name": {
+						"type": "string",
+						"description": "The full domain name."
+					},
+					"sld": {
+						"type": "string",
+						"description": "The name portion (second-level domain)."
+					},
+					"tld": {
+						"type": "string",
+						"description": "The extension (top-level domain), without the leading dot."
+					},
+					"available": {
+						"type": "boolean",
+						"description": "Whether the domain is available to register."
+					},
+					"type": {
+						"type": "string",
+						"enum": ["hero", "result", "ai_suggestion"],
+						"description": "Render hint. `hero` — the featured result; `result` — a results-list item; `ai_suggestion` — an AI-generated suggestion."
+					},
+					"is_searched_exact": {
+						"type": "boolean",
+						"description": "`true` only for the row matching the exact domain the user typed (when the search included a TLD, e.g. `coffee.com`); `false` otherwise."
+					},
+					"pricing": {
+						"description": "Pricing for the domain. `null` for unavailable domains.",
+						"oneOf": [
+							{ "$ref": "#/components/schemas/Pricing" },
+							{ "type": "null" }
+						]
+					}
+				}
+			},
+			"Pricing": {
+				"type": "object",
+				"properties": {
+					"currency": {
+						"type": "string",
+						"description": "ISO 4217 currency code (e.g. \"USD\")."
+					},
+					"register": {
+						"type": "number",
+						"description": "First-year registration price. `0` means the first year is free."
+					},
+					"renew": {
+						"type": "number",
+						"description": "Annual renewal price."
+					},
+					"period": {
+						"type": "string",
+						"description": "Billing period the amounts apply to (always \"year\")."
+					},
+					"is_free_first_year": {
+						"type": "boolean",
+						"description": "Whether the first year is free."
+					},
+					"summary": {
+						"type": "string",
+						"description": "Ready-to-display price string, e.g. \"1st Year Free, then $9.99/yr\"."
+					}
+				}
+			},
+			"Meta": {
+				"type": "object",
+				"properties": {
+					"search_term": {
+						"type": "string",
+						"description": "The search term after sanitisation."
+					},
+					"typed_tld": {
+						"type": ["string", "null"],
+						"description": "The TLD the user typed if they searched a full domain, otherwise `null`."
+					},
+					"autosuggest": {
+						"type": "boolean",
+						"description": "The resolved value of the `autosuggest` flag for this request."
+					},
+					"aisuggest": {
+						"type": "boolean",
+						"description": "The resolved value of the `aisuggest` flag for this request."
+					}
+				}
+			},
+			"ErrorBadRequest": {
+				"type": "object",
+				"required": ["error"],
+				"properties": {
+					"error": {
+						"type": "string",
+						"example": "search_term is required and must not be empty after sanitisation"
+					}
+				}
+			},
+			"ErrorUnauthorized": {
+				"type": "object",
+				"required": ["error"],
+				"properties": {
+					"error": {
+						"type": "string",
+						"example": "Invalid partner token"
+					}
+				}
+			},
+			"ErrorServer": {
+				"type": "object",
+				"required": ["error"],
+				"properties": {
+					"error": {
+						"type": "string",
+						"example": "Internal server error"
+					}
+				}
+			},
+			"ErrorUnavailable": {
+				"type": "object",
+				"required": ["error"],
+				"properties": {
+					"error": {
+						"type": "string",
+						"example": "Domain availability service unavailable"
+					}
+				}
+			}
+		}
+	}
+}
