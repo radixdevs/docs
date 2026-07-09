@@ -1,8 +1,8 @@
 {
 	"openapi": "3.1.0",
 	"info": {
-		"title": "Namify SuperSonic API",
-		"description": "SuperSonic returns a ranked set of available domains for a search term — the exact match, available alternatives, and optional AI-generated suggestions — each with live pricing.\n\nAll requests require a bearer token issued for your partner account. Results (TLDs and pricing) are scoped to your account's configured catalogue.\n\n**Base URL:** `https://supersonic.namify.host`",
+		"title": "Namify MetaSearch API",
+		"description": "MetaSearch returns a ranked set of available domains for a search term — the exact match, available alternatives, and optional AI-generated suggestions — each with live pricing.\n\nAll requests require a bearer token issued for your partner account. Results (TLDs and pricing) are scoped to your account's configured catalogue.\n\n**Base URL:** `https://metasearch.namify.host`",
 		"version": "1.0.0",
 		"license": {
 			"name": "MIT"
@@ -10,7 +10,7 @@
 	},
 	"servers": [
 		{
-			"url": "https://supersonic.namify.host"
+			"url": "https://metasearch.namify.host"
 		}
 	],
 	"security": [
@@ -21,15 +21,17 @@
 	"paths": {
 		"/v1/search": {
 			"get": {
-				"tags": ["Domains"],
-				"summary": "SuperSonic domain search",
-				"description": "Search a name and receive a ranked set of domains — the exact match, available alternatives, and (optionally) AI-generated suggestions — each with live pricing. The response leads with a featured result (`type: \"hero\"`), followed by the results list, and a trailing block of AI suggestions when `aisuggest=true`.",
+				"tags": [
+					"Domains"
+				],
+				"summary": "MetaSearch domain search",
+				"description": "MetaSearch takes a search term and returns a ranked set of domains — the exact match, plus available alternatives (when `autosuggest` is on) and AI-suggested brandable names (when `aisuggest` is on) — each with live pricing. The response leads with a featured result (`type: \"hero\"`), then the results list, then any AI-suggested names.",
 				"parameters": [
 					{
 						"name": "search_term",
 						"in": "query",
 						"required": true,
-						"description": "The name or domain to search. Either a bare name (`coffee`) or a full domain including a TLD (`coffee.com`). Maximum 63 characters.",
+						"description": "The name to search — either a bare label (`coffee`) or a full domain including a TLD (`coffee.com`). Include a TLD to search that exact domain; the matching row is returned flagged `is_searched_exact: true`. Maximum 63 characters.",
 						"schema": {
 							"type": "string",
 							"example": "coffee"
@@ -39,7 +41,7 @@
 						"name": "autosuggest",
 						"in": "query",
 						"required": false,
-						"description": "When `true`, include alternative available names in the results list. Defaults to `false`.",
+						"description": "When `true`, MetaSearch automatically suggests additional available names — close variations coined around your `search_term` — and folds them into the results list alongside the exact match. Defaults to `false`.",
 						"schema": {
 							"type": "boolean",
 							"default": false,
@@ -50,7 +52,7 @@
 						"name": "aisuggest",
 						"in": "query",
 						"required": false,
-						"description": "When `true`, append a block of AI-generated brandable suggestions after the results list. Defaults to `false`.",
+						"description": "When `true`, MetaSearch appends a block of AI-suggested names — brandable, model-coined alternatives to your `search_term`, each returned with `type: \"ai_suggestion\"`. Independent of `autosuggest`; defaults to `false`.",
 						"schema": {
 							"type": "boolean",
 							"default": false,
@@ -63,7 +65,9 @@
 						"description": "Ranked search results with live availability and pricing.",
 						"content": {
 							"application/json": {
-								"schema": { "$ref": "#/components/schemas/SearchResponse" },
+								"schema": {
+									"$ref": "#/components/schemas/SearchResponse"
+								},
 								"example": {
 									"results": [
 										{
@@ -131,7 +135,9 @@
 						"description": "`search_term` is missing, empty, or longer than 63 characters.",
 						"content": {
 							"application/json": {
-								"schema": { "$ref": "#/components/schemas/ErrorBadRequest" }
+								"schema": {
+									"$ref": "#/components/schemas/ErrorBadRequest"
+								}
 							}
 						}
 					},
@@ -139,7 +145,9 @@
 						"description": "API key is missing or invalid.",
 						"content": {
 							"application/json": {
-								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+								"schema": {
+									"$ref": "#/components/schemas/ErrorUnauthorized"
+								}
 							}
 						}
 					},
@@ -147,7 +155,9 @@
 						"description": "Internal server error.",
 						"content": {
 							"application/json": {
-								"schema": { "$ref": "#/components/schemas/ErrorServer" }
+								"schema": {
+									"$ref": "#/components/schemas/ErrorServer"
+								}
 							}
 						}
 					},
@@ -155,7 +165,9 @@
 						"description": "The domain availability service is temporarily unavailable.",
 						"content": {
 							"application/json": {
-								"schema": { "$ref": "#/components/schemas/ErrorUnavailable" }
+								"schema": {
+									"$ref": "#/components/schemas/ErrorUnavailable"
+								}
 							}
 						}
 					}
@@ -177,8 +189,10 @@
 				"properties": {
 					"results": {
 						"type": "array",
-						"description": "The full result set — never paginated.",
-						"items": { "$ref": "#/components/schemas/DomainResult" }
+						"description": "The full result set, in render order: the `hero` first (when present), then the results list, then any AI-suggested names. Never paginated.",
+						"items": {
+							"$ref": "#/components/schemas/DomainResult"
+						}
 					},
 					"results_total": {
 						"type": "integer",
@@ -192,7 +206,9 @@
 						"type": "string",
 						"description": "Present only when there are no results (e.g. \"No results for this name\")."
 					},
-					"meta": { "$ref": "#/components/schemas/Meta" }
+					"meta": {
+						"$ref": "#/components/schemas/Meta"
+					}
 				}
 			},
 			"DomainResult": {
@@ -200,34 +216,42 @@
 				"properties": {
 					"domain_name": {
 						"type": "string",
-						"description": "The full domain name."
+						"description": "The full domain name (SLD + TLD), e.g. `coffee.com`."
 					},
 					"sld": {
 						"type": "string",
-						"description": "The name portion (second-level domain)."
+						"description": "The second-level domain — the name portion, left of the dot (e.g. `coffee` in `coffee.com`)."
 					},
 					"tld": {
 						"type": "string",
-						"description": "The extension (top-level domain), without the leading dot."
+						"description": "The top-level domain — the extension, without the leading dot (e.g. `com`)."
 					},
 					"available": {
 						"type": "boolean",
-						"description": "Whether the domain is available to register."
+						"description": "Whether the domain is available to register through your partner account. Taken names can still appear (e.g. the searched exact) with `available: false` and `pricing: null`."
 					},
 					"type": {
 						"type": "string",
-						"enum": ["hero", "result", "ai_suggestion"],
-						"description": "Render hint. `hero` — the featured result; `result` — a results-list item; `ai_suggestion` — an AI-generated suggestion."
+						"enum": [
+							"hero",
+							"result",
+							"ai_suggestion"
+						],
+						"description": "What kind of result this is. `hero` — the featured pick MetaSearch leads with; `result` — a standard results-list entry (an exact match, or an automatically suggested name when `autosuggest` is on); `ai_suggestion` — an AI-suggested, model-coined name (returned when `aisuggest` is on)."
 					},
 					"is_searched_exact": {
 						"type": "boolean",
-						"description": "`true` only for the row matching the exact domain the user typed (when the search included a TLD, e.g. `coffee.com`); `false` otherwise."
+						"description": "`true` only for the row matching the exact domain in the `search_term` (when a TLD was included, e.g. `coffee.com`) — use it to highlight \"the domain you searched,\" whether available or taken. `false` on every other row."
 					},
 					"pricing": {
-						"description": "Pricing for the domain. `null` for unavailable domains.",
+						"description": "Pricing for the domain, from your account's catalogue. `null` when the domain is unavailable.",
 						"oneOf": [
-							{ "$ref": "#/components/schemas/Pricing" },
-							{ "type": "null" }
+							{
+								"$ref": "#/components/schemas/Pricing"
+							},
+							{
+								"type": "null"
+							}
 						]
 					}
 				}
@@ -241,11 +265,11 @@
 					},
 					"register": {
 						"type": "number",
-						"description": "First-year registration price. `0` means the first year is free."
+						"description": "First-year registration price. `0` means the first year is free — see `is_free_first_year`."
 					},
 					"renew": {
 						"type": "number",
-						"description": "Annual renewal price."
+						"description": "Standard annual renewal price, charged from the second year onward."
 					},
 					"period": {
 						"type": "string",
@@ -253,11 +277,11 @@
 					},
 					"is_free_first_year": {
 						"type": "boolean",
-						"description": "Whether the first year is free."
+						"description": "`true` when the first year is free (`register` is `0`); the customer pays `renew` from year two."
 					},
 					"summary": {
 						"type": "string",
-						"description": "Ready-to-display price string, e.g. \"1st Year Free, then $9.99/yr\"."
+						"description": "A ready-to-display price string you can render as-is (e.g. \"1st Year Free, then $9.99/yr\" or \"$12.99/yr\")."
 					}
 				}
 			},
@@ -266,11 +290,14 @@
 				"properties": {
 					"search_term": {
 						"type": "string",
-						"description": "The search term after sanitisation."
+						"description": "Your `search_term`, normalised (lowercased and trimmed)."
 					},
 					"typed_tld": {
-						"type": ["string", "null"],
-						"description": "The TLD the user typed if they searched a full domain, otherwise `null`."
+						"type": [
+							"string",
+							"null"
+						],
+						"description": "The TLD parsed from the `search_term` when a full domain was searched (e.g. `com` for `coffee.com`), otherwise `null`."
 					},
 					"autosuggest": {
 						"type": "boolean",
@@ -284,7 +311,9 @@
 			},
 			"ErrorBadRequest": {
 				"type": "object",
-				"required": ["error"],
+				"required": [
+					"error"
+				],
 				"properties": {
 					"error": {
 						"type": "string",
@@ -294,7 +323,9 @@
 			},
 			"ErrorUnauthorized": {
 				"type": "object",
-				"required": ["error"],
+				"required": [
+					"error"
+				],
 				"properties": {
 					"error": {
 						"type": "string",
@@ -304,7 +335,9 @@
 			},
 			"ErrorServer": {
 				"type": "object",
-				"required": ["error"],
+				"required": [
+					"error"
+				],
 				"properties": {
 					"error": {
 						"type": "string",
@@ -314,7 +347,9 @@
 			},
 			"ErrorUnavailable": {
 				"type": "object",
-				"required": ["error"],
+				"required": [
+					"error"
+				],
 				"properties": {
 					"error": {
 						"type": "string",
