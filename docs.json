@@ -59,9 +59,9 @@
             "group": "Domains",
             "expanded": true,
             "pages": [
+              "api-reference/domains/metasearch",
               "api-reference/domains/availability",
               "api-reference/domains/suggestions",
-              "api-reference/domains/metasearch",
               "api-reference/domains/registration",
               "api-reference/domains/renewal",
               "api-reference/domains/orders",

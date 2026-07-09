@@ -1,15 +1,15 @@
 ---
 title: 'MetaSearch'
-description: 'Search a name and return the best available domains — the exact match, available alternatives, and optional AI-generated suggestions — each with live pricing.'
+description: 'Search a name and return the best available domains: the exact match, available alternatives, and optional AI-generated suggestions, each with live pricing.'
 openapi: 'api-reference/metasearch-openapi.json GET /v1/search'
 ---
 
-Returns a ranked set of available domains for a search term: the exact-match domain, available alternatives, and (optionally) AI-generated brandable suggestions — each with ready-to-display pricing.
+Returns a ranked set of available domains for a search term: the exact-match domain, available alternatives, and (optionally) AI-generated brandable suggestions, each with ready-to-display pricing.
 
-**How it works:** Pass a `search_term` — either a bare name (`coffee`) or a full domain including a TLD (`coffee.com`). The response leads with a featured result (`type: "hero"`), followed by the results list, and — when enabled — a trailing block of AI-suggested names. Every item carries a live `available` flag and a `pricing` object (`null` when the domain is taken).
+**How it works:** Pass a `search_term`: either a bare name (`coffee`) or a full domain including a TLD (`coffee.com`). The response leads with a featured result (`type: "hero"`), followed by the results list, and (when enabled) a trailing block of AI-suggested names. Every item carries a live `available` flag and a `pricing` object (`null` when the domain is taken).
 
-**Suggestions:** Set `autosuggest=true` and MetaSearch automatically suggests additional available names — close variations around your search term — in the results list. Set `aisuggest=true` and it appends a block of AI-suggested, brandable names (each `type: "ai_suggestion"`). Both are off by default; enable either or both.
+**Suggestions:** Set `autosuggest=true` and MetaSearch automatically suggests additional available names (close variations around your search term) in the results list. Set `aisuggest=true` and it appends a block of AI-suggested, brandable names (each `type: "ai_suggestion"`). Both are off by default; enable either or both.
 
 **Pricing:** Each available result includes a `pricing` object with the registration and renewal price, an `is_free_first_year` flag, and a ready-to-display `summary` string (e.g. `"1st Year Free, then $9.99/yr"`). Prices are scoped to your partner account's catalogue.
 
-**The searched domain:** When the search includes a TLD (e.g. `coffee.com`), the row matching that exact domain is flagged with `is_searched_exact: true`, so you can highlight "the domain you searched" — whether it's available or taken.
+**The searched domain:** When the search includes a TLD (e.g. `coffee.com`), the row matching that exact domain is flagged with `is_searched_exact: true`, so you can highlight "the domain you searched," whether it's available or taken.

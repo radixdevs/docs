@@ -2,7 +2,7 @@
 	"openapi": "3.1.0",
 	"info": {
 		"title": "Namify MetaSearch API",
-		"description": "MetaSearch returns a ranked set of available domains for a search term — the exact match, available alternatives, and optional AI-generated suggestions — each with live pricing.\n\nAll requests require a bearer token issued for your partner account. Results (TLDs and pricing) are scoped to your account's configured catalogue.\n\n**Base URL:** `https://metasearch.namify.host`",
+		"description": "MetaSearch returns a ranked set of available domains for a search term: the exact match, available alternatives, and optional AI-generated suggestions, each with live pricing.\n\nAll requests require a bearer token issued for your partner account. Results (TLDs and pricing) are scoped to your account's configured catalogue.\n\n**Base URL:** `https://metasearch.namify.host`",
 		"version": "1.0.0",
 		"license": {
 			"name": "MIT"
@@ -25,13 +25,13 @@
 					"Domains"
 				],
 				"summary": "MetaSearch domain search",
-				"description": "MetaSearch takes a search term and returns a ranked set of domains — the exact match, plus available alternatives (when `autosuggest` is on) and AI-suggested brandable names (when `aisuggest` is on) — each with live pricing. The response leads with a featured result (`type: \"hero\"`), then the results list, then any AI-suggested names.",
+				"description": "MetaSearch takes a search term and returns a ranked set of domains: the exact match, plus available alternatives (when `autosuggest` is on) and AI-suggested brandable names (when `aisuggest` is on), each with live pricing. The response leads with a featured result (`type: \"hero\"`), then the results list, then any AI-suggested names.",
 				"parameters": [
 					{
 						"name": "search_term",
 						"in": "query",
 						"required": true,
-						"description": "The name to search — either a bare label (`coffee`) or a full domain including a TLD (`coffee.com`). Include a TLD to search that exact domain; the matching row is returned flagged `is_searched_exact: true`. Maximum 63 characters.",
+						"description": "The name to search: either a bare label (`coffee`) or a full domain including a TLD (`coffee.com`). Include a TLD to search that exact domain; the matching row is returned flagged `is_searched_exact: true`. Maximum 63 characters.",
 						"schema": {
 							"type": "string",
 							"example": "coffee"
@@ -41,7 +41,7 @@
 						"name": "autosuggest",
 						"in": "query",
 						"required": false,
-						"description": "When `true`, MetaSearch automatically suggests additional available names — close variations coined around your `search_term` — and folds them into the results list alongside the exact match. Defaults to `false`.",
+						"description": "When `true`, MetaSearch automatically suggests additional available names (close variations coined around your `search_term`) and folds them into the results list alongside the exact match. Defaults to `false`.",
 						"schema": {
 							"type": "boolean",
 							"default": false,
@@ -52,7 +52,7 @@
 						"name": "aisuggest",
 						"in": "query",
 						"required": false,
-						"description": "When `true`, MetaSearch appends a block of AI-suggested names — brandable, model-coined alternatives to your `search_term`, each returned with `type: \"ai_suggestion\"`. Independent of `autosuggest`; defaults to `false`.",
+						"description": "When `true`, MetaSearch appends a block of AI-suggested names: brandable, model-coined alternatives to your `search_term`, each returned with `type: \"ai_suggestion\"`. Independent of `autosuggest`; defaults to `false`.",
 						"schema": {
 							"type": "boolean",
 							"default": false,
@@ -220,11 +220,11 @@
 					},
 					"sld": {
 						"type": "string",
-						"description": "The second-level domain — the name portion, left of the dot (e.g. `coffee` in `coffee.com`)."
+						"description": "The second-level domain: the name portion, left of the dot (e.g. `coffee` in `coffee.com`)."
 					},
 					"tld": {
 						"type": "string",
-						"description": "The top-level domain — the extension, without the leading dot (e.g. `com`)."
+						"description": "The top-level domain: the extension, without the leading dot (e.g. `com`)."
 					},
 					"available": {
 						"type": "boolean",
@@ -237,11 +237,11 @@
 							"result",
 							"ai_suggestion"
 						],
-						"description": "What kind of result this is. `hero` — the featured pick MetaSearch leads with; `result` — a standard results-list entry (an exact match, or an automatically suggested name when `autosuggest` is on); `ai_suggestion` — an AI-suggested, model-coined name (returned when `aisuggest` is on)."
+						"description": "What kind of result this is. `hero`: the featured pick MetaSearch leads with; `result`: a standard results-list entry (an exact match, or an automatically suggested name when `autosuggest` is on); `ai_suggestion`: an AI-suggested, model-coined name (returned when `aisuggest` is on)."
 					},
 					"is_searched_exact": {
 						"type": "boolean",
-						"description": "`true` only for the row matching the exact domain in the `search_term` (when a TLD was included, e.g. `coffee.com`) — use it to highlight \"the domain you searched,\" whether available or taken. `false` on every other row."
+						"description": "`true` only for the row matching the exact domain in the `search_term` (when a TLD was included, e.g. `coffee.com`). Use it to highlight \"the domain you searched,\" whether available or taken. `false` on every other row."
 					},
 					"pricing": {
 						"description": "Pricing for the domain, from your account's catalogue. `null` when the domain is unavailable.",
@@ -265,7 +265,7 @@
 					},
 					"register": {
 						"type": "number",
-						"description": "First-year registration price. `0` means the first year is free — see `is_free_first_year`."
+						"description": "First-year registration price. `0` means the first year is free (see `is_free_first_year`)."
 					},
 					"renew": {
 						"type": "number",
