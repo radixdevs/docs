@@ -123,8 +123,8 @@
           {
             "group": "Coupons",
             "pages": [
-              "validate",
-              "untitled-page"
+              "generate-coupon",
+              "validate-coupon"
             ]
           },
           {
