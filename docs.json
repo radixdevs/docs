@@ -125,7 +125,8 @@
             "pages": [
               "generate-coupon",
               "validate-coupon"
-            ]
+            ],
+            "expanded": true
           },
           {
             "group": "Miscellaneous",
