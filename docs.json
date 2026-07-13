@@ -121,6 +121,13 @@
             ]
           },
           {
+            "group": "Coupons",
+            "pages": [
+              "validate",
+              "untitled-page"
+            ]
+          },
+          {
             "group": "Miscellaneous",
             "expanded": true,
             "pages": [
