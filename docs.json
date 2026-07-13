@@ -126,7 +126,8 @@
               "generate-coupon",
               "validate-coupon"
             ],
-            "expanded": true
+            "expanded": true,
+            "hidden": true
           },
           {
             "group": "Miscellaneous",
