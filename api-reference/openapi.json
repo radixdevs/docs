@@ -2120,6 +2120,49 @@
 			}
 		},
 
+		"/api/v1/offers/redeem": {
+			"post": {
+				"tags": ["Miscellaneous"],
+				"summary": "Redeem a registration offer",
+				"description": "Generates a unique, single-use coupon code for a customer and returns a redirect link that applies it automatically at checkout.\n\nEach coupon is scoped to your partner account's active registration campaign and is intended for one customer only. The coupon is not tied to a customer identifier on our end, so **you are responsible for mapping the returned `coupon_code` to the requesting customer's session or account in your own system** — this is what prevents the coupon from being reused or shared beyond the intended customer.\n\n**Requirements:** Your partner account must have an active registration campaign configured. If no campaign is active, this endpoint returns a `422` error.",
+				"responses": {
+					"200": {
+						"description": "Coupon generated successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/OfferRedeemResponse" },
+								"example": {
+									"status": "SUCCESS",
+									"redirect_link": "https://acme.namify.store/storefront/?coupon=WELCOME10",
+									"coupon_code": "WELCOME10"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "No active registration campaign is configured for your partner account, or the coupon could not be retrieved.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"example": {
+									"status": "ERROR",
+									"message": "Failed to retrieve coupon details. Please try again later."
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+
 		"/api/v1/coupons/validate": {
 			"post": {
 				"tags": ["Miscellaneous"],
@@ -2199,6 +2242,14 @@
 				"properties": {
 					"status": { "type": "string", "example": "SUCCESS" },
 					"message": { "type": "string", "example": "DNS service activated successfully" }
+				}
+			},
+			"OfferRedeemResponse": {
+				"type": "object",
+				"properties": {
+					"status": { "type": "string", "example": "SUCCESS" },
+					"redirect_link": { "type": "string", "format": "uri", "description": "URL to redirect the customer to, with the generated coupon code applied as a query parameter.", "example": "https://acme.namify.store/storefront/?coupon=WELCOME10" },
+					"coupon_code": { "type": "string", "description": "Unique, single-use coupon code generated for this customer. Map this to the customer's session or account on your end to prevent reuse.", "example": "WELCOME10" }
 				}
 			},
 			"DomainOrdersResponse": {
