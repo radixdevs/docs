@@ -2124,7 +2124,7 @@
 			"post": {
 				"tags": ["Miscellaneous"],
 				"summary": "Redeem a registration offer",
-				"description": "Generates a unique, single-use coupon code for a customer and returns a redirect link that applies it automatically at checkout.\n\nEach coupon is scoped to your partner account's active registration campaign and is intended for one customer only. The coupon is not tied to a customer identifier on our end, so **you are responsible for mapping the returned `coupon_code` to the requesting customer's session or account in your own system** — this is what prevents the coupon from being reused or shared beyond the intended customer.\n\n**Requirements:** Your partner account must have an active registration campaign configured. If no campaign is active, this endpoint returns a `422` error.",
+				"description": "Generates a unique, single-use coupon code for a customer and returns a redirect link that applies it automatically at checkout.\n\nEach coupon is scoped to your partner account's active registration campaign and is intended for one customer only. The coupon is not tied to a customer identifier on our end, so **you are responsible for mapping the returned `coupon_code` to the requesting customer's session or account in your own system** — this is what prevents the coupon from being reused or shared beyond the intended customer.\n\n**Domain search integration:** Depending on your partnership type, if domain search happens on your end rather than ours, append `domain=[searched_term]` as a query parameter to the returned `redirect_link` before redirecting the customer (e.g. `https://acme.namify.store/storefront/?coupon=WELCOME10&domain=example.com`). This runs a domain search and auto-applies the coupon in Namify's checkout flow. Whether this applies to your integration depends on your partnership configuration — check with your Namify contact if you're unsure.\n\n**Requirements:** Your partner account must have an active registration campaign configured. If no campaign is active, this endpoint returns a `422` error.",
 				"responses": {
 					"200": {
 						"description": "Coupon generated successfully.",
@@ -2133,7 +2133,7 @@
 								"schema": { "$ref": "#/components/schemas/OfferRedeemResponse" },
 								"example": {
 									"status": "SUCCESS",
-									"redirect_link": "https://acme.namify.store/storefront/?coupon=WELCOME10",
+									"redirect_link": "https://acme.namify.store/?coupon=WELCOME10",
 									"coupon_code": "WELCOME10"
 								}
 							}
@@ -2248,7 +2248,7 @@
 				"type": "object",
 				"properties": {
 					"status": { "type": "string", "example": "SUCCESS" },
-					"redirect_link": { "type": "string", "format": "uri", "description": "URL to redirect the customer to, with the generated coupon code applied as a query parameter.", "example": "https://acme.namify.store/storefront/?coupon=WELCOME10" },
+					"redirect_link": { "type": "string", "format": "uri", "description": "URL to redirect the customer to, with the generated coupon code applied as a query parameter. Depending on your partnership type, if domain search happens on your end, append `domain=[searched_term]` to this URL before redirecting to also trigger a domain search on Namify's checkout flow (e.g. `...&domain=example.com`).", "example": "https://acme.namify.store/?coupon=WELCOME10" },
 					"coupon_code": { "type": "string", "description": "Unique, single-use coupon code generated for this customer. Map this to the customer's session or account on your end to prevent reuse.", "example": "WELCOME10" }
 				}
 			},
