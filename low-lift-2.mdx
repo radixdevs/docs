@@ -2,7 +2,7 @@
 title: "Low Lift 2.0 (Draft)"
 ---
 
-**What is a Low-Lift Integration?**
+## **What is a Low-Lift Integration?**
 
 A Low-Lift integration is the simplest way to offer domains to your customers without building the domain purchase experience yourself. You introduce the domain opportunity, and Namify handles the rest.
 
@@ -12,7 +12,7 @@ The basic model is:
 
 You add an entry point within your product, whether that's a page, an email, or a button. When the customer clicks on the domain offer, they are redirected to a co-branded Namify experience. From there, Namify handles the domain journey. Once registration is complete, the user returns to your platform.
 
-**Who is it suited for?**
+## **Who is it suited for?**
 
 Low Lift is designed for partners who want to introduce domains without investing in a native domain-registration experience, compliance, or after-sales support.
 
@@ -23,19 +23,27 @@ It's a good fit when:
 - You don't have the resource bandwidth to build and maintain domain search, checkout, registration, and management experiences.
 - You want Namify to handle it all while your product teams stay focused on the core product.
 
-<br />**Journey at a glance**
+## <br />**Journey at a glance**
 
 The standard customer journey looks like this:
 
-**On your platform:** A domain offer appears in your product, the user is validated for eligibility, they click the CTA, and they're redirected to Namify.
+### **On your platform:** 
 
-**On the Namify platform:** The user searches, selects a domain, completes checkout and registration, and Namify notifies your platform via webhook.
+A domain offer appears in your product, the user is validated for eligibility, they click the CTA, and they're redirected to Namify.
 
-**Back on your platform:** The user lands back where they started.
+### **On the Namify platform:** 
+
+The user searches, selects a domain, completes checkout and registration, and Namify notifies your platform via webhook.
+
+### **Back on your platform:** 
+
+The user lands back where they started.
 
 Domain management continues on Namify.
 
-**Step 1: Introduce the offer**
+## Breakdown of the journey
+
+### **Step 1: Introduce the offer**
 
 Your first decision is where domains appear in your existing user journey.
 
@@ -53,7 +61,7 @@ You decide:
 - when it appears, and
 - what the CTA says.
 
-**Step 2: Validating eligibility**
+### **Step 2: Validating eligibility**
 
 If the offer is limited to eligible users, you need to confirm eligibility before sending anyone to Namify.
 
@@ -74,7 +82,7 @@ In short, it's one API call before the redirect. After that:
 
 Note that the coupon flow only exists for users you've already validated. If an unqualified user reaches your co-branded Namify page anyway, for instance through a shared or expired link, the coupon won't apply. They can still register the domain, but at full retail price. Your offer is never exposed beyond the users you issue coupons to.
 
-**Step 3: Send user to Namify**
+### **Step 3: Send user to Namify**
 
 When the user chooses to continue, your platform redirects them using the redirect\_link returned in Step 2. Since the coupon is already in the link, Namify recognizes the offer and picks up the journey from there.
 
@@ -88,13 +96,13 @@ Namify's responsibility:
 - Receive the user.
 - Recognize the coupon and apply the offer.
 
-**Step 4: The Namify experience**
+### **Step 4: The Namify experience**
 
 The user completes the whole journey on Namify: search, select, checkout, and registration, including availability, pricing, payment, contact details, and ICANN verification.
 
 You build and operate none of it. That includes payments, compliance, failed transactions, refunds, and support.
 
-**Step 5: Return to your platform**
+### **Step 5: Return to your platform**
 
 After registering, the user lands back in your product, closing the loop:
 
@@ -102,48 +110,60 @@ After registering, the user lands back in your product, closing the loop:
 
 On successful registration, Namify fires a webhook to your system. You can use it to reflect the domain when the user returns, whether that's a success state, an account marked as domain-connected, or your own follow-up flow. Domain management always stays on Namify.
 
-**After registration**
+## **After registration**
 
 After registration, Namify remains responsible for the domain-management experience, but there are a few small things you can do to improve the user's experience.
 
-**Use the webhook to personalize the experience.** <br />The registration webhook tells you which user registered which domain. That's enough to automatically connect the domain to their profile, store, or site, to show it in their account settings, or to trigger an upsell or onboarding flow.
+#### **Use the webhook to personalize the experience.** 
 
-**DNS is pre-configured at registration.** <br />We can apply custom DNS settings to every domain automatically at registration, so it points at your platform instantly. Your users never have to deal with confusing DNS settings, and your support team never sees a “how to connect a domain” ticket.
+The registration webhook tells you which user registered which domain. That's enough to automatically connect the domain to their profile, store, or site, to show it in their account settings, or to trigger an upsell or onboarding flow.
 
-**Add a “Manage domain” button.** <br />You can add a “Manage domain” button in your product that deep-links straight to the user's Namify management page. The domain feels like part of your product, even though we run everything behind it.
+#### **DNS is pre-configured at registration.** 
+
+We can apply custom DNS settings to every domain automatically at registration, so it points at your platform instantly. Your users never have to deal with confusing DNS settings, and your support team never sees a “how to connect a domain” ticket.
+
+#### **Add a “Manage domain” button.** 
+
+You can add a “Manage domain” button in your product that deep-links straight to the user's Namify management page. The domain feels like part of your product, even though we run everything behind it.
 
 **_\<\< add swimlane diagram here \>\>_**
 
-**Who does what?**
+## **Who does what?**
 
-| **Step** | **You** | **Namify** |
-| :-- | :-- | :-- |
-| 1. Introduce the offer | Choose where, when, and what the CTA says | – |
-| 2. Validate eligibility | Your backend decides who qualifies | – |
+| Steps | You | Namify |
+| --- | --- | --- |
+| 1. Introduce the offer | Choose where, when, and what the <br />CTA says | - |
+| 2. Validate eligibility | Your backend decides who qualifies | - |
 | 3. Request coupon | One API call to /offers/redeem | Validate key, return coupon\_code \+ redirect\_link |
 | 4. Map and redirect | Tie coupon to the user's session; send them via redirect\_link | Receive the user, apply the offer |
-| 5. Search and select | – | Search, availability, pricing, suggestions |
-| 6. Checkout and registration | – | Payment, contact details, ICANN verification, registration, failures, refunds, support |
+| 5. Search and select | - | Search, availability, pricing, suggestions |
+| 6. Checkout and <br />registration | - | Payment, contact details, ICANN verification, registration, failures, refunds, support |
 | 7. Return and connect | (Optional) use the webhook to connect the domain, show success, or trigger follow-up | Fire the registration webhook; pre-configure DNS; host domain management forever |
 
-**What if something goes wrong?**
+## **What if something goes wrong?**
 
 The redirect is the dividing line. Before it, errors are yours. After it, they're ours.
 
-**You:**
+#### **You:**
 
 - Handle errors before the redirect.
 - If the coupon request fails, no coupon or redirect\_link is returned. Don't redirect. The user stays on your platform and sees nothing; the offer simply isn't shown.
 
-**Namify:**
+#### **Namify:**
 
 - Handles everything after the redirect, including payment failures, errors in the purchase and registration flow, and support.
 - Sends the webhook only after successful registration. If registration doesn't complete, no webhook fires, so you never connect a domain that doesn't exist.
 
-**Ready to build?**
+## **Ready to build?**
 
-**Read the docs.** Find the full API reference at [<u>docs.namify.tech</u>](http://docs.namify.tech), including the complete Low Lift integration guide.
+#### **Read the docs.** 
 
-**Get your sandbox.** Your BD contact will set you up with sandbox credentials and an API key so you can test the full flow end to end before anything goes live.
+Find the full API reference at [<u>docs.namify.tech</u>](http://docs.namify.tech), including the complete Low Lift integration guide.
 
-**Go live.** One API call, one redirect. Most partners ship in just a couple of days.
+#### **Get your sandbox.** 
+
+Your BD contact will set you up with sandbox credentials and an API key so you can test the full flow end to end before anything goes live.
+
+#### **Go live.** 
+
+One API call, one redirect. Most partners ship in just a couple of days.
