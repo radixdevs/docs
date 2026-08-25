@@ -68,13 +68,13 @@ If the offer is limited to eligible users, you need to confirm eligibility befor
 The flow works as follows:
 
 1. **You validate the user.** Your platform decides who qualifies. The criteria are yours: plan tier, account age, a completed store, or whatever fits your product.
-2. **You request a coupon from Namify.** Once validated, your backend calls POST /api/v1/offers/redeem to get a unique, single-use coupon.
-3. **Namify returns the coupon.** The response includes a coupon\_code (a unique, single-use coupon for that user) and a redirect\_link (the Namify URL with the coupon already applied). The coupon is scoped to your active offer.
-4. **You redirect the user.** Send the user to the returned redirect\_link. The coupon is already included in the URL, so they land directly in the offer page without needing to enter a coupon code manually.
+2. **You request a coupon from Namify.** Once validated, your backend calls [POST /api/v1/offers/redeem](https://docs.namify.tech/generate-coupon) to get a unique, single-use coupon.
+3. **Namify returns the coupon.** The response includes a coupon\_code (a unique, single-use coupon for that user) and a [redirect\_link](https://docs.namify.tech/generate-coupon#response-redirect-link) (the Namify URL with the coupon already applied). The coupon is scoped to your active offer.
+4. **You redirect the user.** Send the user to the returned [redirect\_link](https://docs.namify.tech/generate-coupon#response-redirect-link). The coupon is already included in the URL, so they land directly in the offer page without needing to enter a coupon code manually.
 
 Two prerequisites are needed before this flow can run: a Namify API key, and an active domain offer configured on Namify.
 
-Keep in mind that you're responsible for tying the returned coupon\_code to the user's session or account. This stops the coupon from being shared or reused beyond the person it was issued for.
+Keep in mind that you're responsible for tying the returned [coupon\_code](https://docs.namify.tech/generate-coupon#response-coupon-code) to the user's session or account. This stops the coupon from being shared or reused beyond the person it was issued for.
 
 In short, it's one API call before the redirect. After that:
 
@@ -84,12 +84,12 @@ Note that the coupon flow only exists for users you've already validated. If an 
 
 ### **Step 3: Send user to Namify**
 
-When the user chooses to continue, your platform redirects them using the redirect\_link returned in Step 2. Since the coupon is already in the link, Namify recognizes the offer and picks up the journey from there.
+When the user chooses to continue, your platform redirects them using the [redirect\_link](https://docs.namify.tech/generate-coupon#response-redirect-link) returned in Step 2. Since the coupon is already in the link, Namify recognizes the offer and picks up the journey from there.
 
 Your responsibility:
 
 - Provide the CTA.
-- Redirect using the returned redirect\_link.
+- Redirect using the returned [redirect\_link](https://docs.namify.tech/generate-coupon#response-redirect-link).
 
 Namify's responsibility:
 
@@ -114,15 +114,15 @@ On successful registration, Namify fires a webhook to your system. You can use i
 
 After registration, Namify remains responsible for the domain-management experience, but there are a few small things you can do to improve the user's experience.
 
-#### **Use the webhook to personalize the experience.** 
+**Use the webhook to personalize the experience.** 
 
 The registration webhook tells you which user registered which domain. That's enough to automatically connect the domain to their profile, store, or site, to show it in their account settings, or to trigger an upsell or onboarding flow.
 
-#### **DNS is pre-configured at registration.** 
+**DNS is pre-configured at registration.** 
 
 We can apply custom DNS settings to every domain automatically at registration, so it points at your platform instantly. Your users never have to deal with confusing DNS settings, and your support team never sees a “how to connect a domain” ticket.
 
-#### **Add a “Manage domain” button.** 
+**Add a “Manage domain” button.** 
 
 You can add a “Manage domain” button in your product that deep-links straight to the user's Namify management page. The domain feels like part of your product, even though we run everything behind it.
 
@@ -134,7 +134,7 @@ You can add a “Manage domain” button in your product that deep-links straigh
 | --- | --- | --- |
 | 1. Introduce the offer | Choose where, when, and what the <br />CTA says | - |
 | 2. Validate eligibility | Your backend decides who qualifies | - |
-| 3. Request coupon | One API call to /offers/redeem | Validate key, return coupon\_code \+ redirect\_link |
+| 3. Request coupon | One API call to[/offers/redeem](https://docs.namify.tech/generate-coupon) | Validate key, return [coupon\_code](https://docs.namify.tech/generate-coupon#response-coupon-code) \+ [redirect\_link](https://docs.namify.tech/generate-coupon#response-redirect-link) |
 | 4. Map and redirect | Tie coupon to the user's session; send them via redirect\_link | Receive the user, apply the offer |
 | 5. Search and select | - | Search, availability, pricing, suggestions |
 | 6. Checkout and <br />registration | - | Payment, contact details, ICANN verification, registration, failures, refunds, support |
@@ -144,26 +144,26 @@ You can add a “Manage domain” button in your product that deep-links straigh
 
 The redirect is the dividing line. Before it, errors are yours. After it, they're ours.
 
-#### **You:**
+**You:**
 
 - Handle errors before the redirect.
-- If the coupon request fails, no coupon or redirect\_link is returned. Don't redirect. The user stays on your platform and sees nothing; the offer simply isn't shown.
+- If the coupon request fails, no coupon or [redirect\_link](https://docs.namify.tech/generate-coupon#response-redirect-link) is returned. Don't redirect. The user stays on your platform and sees nothing; the offer simply isn't shown.
 
-#### **Namify:**
+**Namify:**
 
 - Handles everything after the redirect, including payment failures, errors in the purchase and registration flow, and support.
 - Sends the webhook only after successful registration. If registration doesn't complete, no webhook fires, so you never connect a domain that doesn't exist.
 
 ## **Ready to build?**
 
-#### **Read the docs.** 
+**Read the docs.** 
 
 Find the full API reference at [<u>docs.namify.tech</u>](http://docs.namify.tech), including the complete Low Lift integration guide.
 
-#### **Get your sandbox.** 
+**Get your sandbox.** 
 
 Your BD contact will set you up with sandbox credentials and an API key so you can test the full flow end to end before anything goes live.
 
-#### **Go live.** 
+**Go live.** 
 
 One API call, one redirect. Most partners ship in just a couple of days.
