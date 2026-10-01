@@ -8,7 +8,7 @@
     "dark": "#000"
   },
   "navigation": {
-    "groups": [
+    "pages": [
       {
         "group": "Getting started",
         "pages": [
@@ -25,6 +25,7 @@
           "integration-patterns",
           "low-lift",
           "hybrid",
+          "hybrid-draft",
           "full-api",
           "go-live-checklist"
         ]
@@ -122,12 +123,12 @@
           },
           {
             "group": "Coupons",
+            "hidden": true,
+            "expanded": true,
             "pages": [
               "generate-coupon",
               "validate-coupon"
-            ],
-            "expanded": true,
-            "hidden": true
+            ]
           },
           {
             "group": "Miscellaneous",
@@ -148,7 +149,8 @@
           "changelog",
           "upcoming"
         ]
-      }
+      },
+      "hybrid-draft-what-is-hybrid-hybrid-lets-you-build-the-domain-search-selection-and-registration-experience-directly-into-your-platform-while-namify-handles-the-underlying-domain-registration-infras"
     ]
   },
   "navbar": {
