@@ -1,0 +1,450 @@
+---
+sidebarTitle: "Hybrid Deferred Card Flow"
+icon: "credit-card"
+title: "Hybrid Integration Guide: Register First, Collect Card Later"
+description: "Register domains through Namify APIs without an upfront card step, then collect card details after registration through the Namify management experience."
+hidden: true
+---
+
+Hybrid lets you build the domain search, selection, and registration experience directly into your platform, while Namify handles the underlying domain-registration infrastructure, support and compliance.
+
+Your users stay within your product throughout the search and registration journey. Your platform uses Namify APIs to search for domains, create users, and register domains.
+
+In this flow, the required registrant information is collected before registration, while card collection is deferred until after the domain has been registered.
+
+Ongoing domain management takes place on Namify.
+
+## Who is it suited for?
+
+This alternative Hybrid flow is suited for select partner implementations where:
+
+- The initial domain-registration journey should not require card details.
+- The required registrant information can still be collected before registration.
+- The selected domain can be registered without an upfront card transaction.
+- Card collection can be completed after registration through the Namify management experience.
+- The partner can surface a clear Manage Domain entry point for any outstanding post-registration action.
+
+<Warning>
+  This flow should be used only where deferred card collection has been agreed as the implementation approach.
+</Warning>
+
+## Journey at a glance
+
+The alternate user journey is:
+
+| Where | What happens |
+| --- | --- |
+| **Your platform** | The user searches for a domain → Namify returns availability, pricing and suggestions → the user selects a domain |
+| **Your platform → Namify** | You collect the required user/registrant details → create the user on Namify → Namify returns the `customer_id` |
+| **Your platform → Namify** | No card details are collected at this stage → you re-check the selected domain → submit the registration request → Namify registers the domain |
+| **Your platform** | Registration is confirmed → the domain appears in the partner product → the user can continue using the partner experience |
+| **Post-registration** | RAA email verification runs separately after registration. Where card information remains outstanding, MAF can prompt the user to complete the required action through Namify. |
+| **Domain management** | The partner provides a Manage Domain entry point → the user opens the Namify management experience → adds the outstanding card details when required |
+
+### User flow
+
+The user flow follows this high-level sequence:
+
+1. Search for a domain
+2. User selects a domain
+3. Create the user / collect registrant details
+4. Register domain
+5. Show registration success
+6. Domain appears in the partner product
+7. RAA verification runs separately
+8. MAF handles deferred card collection where required
+9. Manage Domain provides access to Namify for outstanding actions and ongoing management
+
+<Info>
+  RAA verification and MAF are separate post-registration flows.
+</Info>
+
+## Step 1: Search for domain
+
+The user starts their domain search directly on your platform.
+
+<Steps>
+  <Step title="User enters a domain search">
+    The user enters a name or domain into the search experience you've built.
+  </Step>
+  <Step title="You send the search to Namify">
+    Your backend calls 
+
+    <Steps>
+      <Step>
+        `GET /v1/search`[ (MetaSearch)](/api-reference/domains/metasearch).
+
+        You send the user's search term to Namify. The same MetaSearch request can also be configured to return automatic or AI-generated suggestions.
+      </Step>
+      <Step title="Namify returns the search results">
+        Namify returns:
+
+        - Domain options and availability
+        - Registration and renewal pricing
+        - API or AI-generated suggestions, if requested
+      </Step>
+      <Step title="You display the results">
+        You display the returned domain options within your platform.
+
+        The user stays on your platform throughout this experience.
+      </Step>
+    </Steps>
+
+    ## Step 2: User selects domain
+
+    The user chooses the domain they want from the search results displayed on your platform.
+
+    <Steps>
+      <Step title="User selects their preferred domain">
+        For example:
+
+        `mybrand.store - Available - $X/year -> Select`
+
+        The domain has not been registered yet.
+      </Step>
+      <Step title="You store the user's selection">
+        You retain the selected domain and move the user into the registration journey.
+      </Step>
+    </Steps>
+
+    ## Step 3: Create the user
+
+    Before the selected domain can be registered, you create the user with Namify.
+
+    <Steps>
+      <Step title="You collect the required user details">
+        If you already have the required user/registrant information, use it.
+
+        If not, collect the missing information within your platform.
+      </Step>
+      <Step title="You create the user on Namify">
+        Your backend calls `POST /api/v1/users/signup`[ (Create user)](/api-reference/customer/signup).
+
+        You send the required user and registrant details through this request.
+      </Step>
+      <Step title="Namify creates the user">
+        Namify creates the user and returns a unique `customer_id`.
+
+        Store the returned `customer_id` and associate it with the corresponding user in your system. You will use it when registering the selected domain.
+
+        The registrant information provided when creating the user is used for the domain registration.
+      </Step>
+    </Steps>
+
+    <Note>
+      No card details are collected as part of this step.
+    </Note>
+
+    ## Step 4: Check domain availability
+
+    Before attempting registration, confirm that the selected domain is still available.
+
+    <Steps>
+      <Step title="You check the selected domain again">
+        Your backend calls `GET /api/v1/domains/availability`[ (Availability)](/api-reference/domains/availability).
+      </Step>
+    </Steps>
+  </Step>
+  <Step title="Namify returns the current availability">
+    - **Available** → Continue to the Register Domain step.
+    - **Unavailable** → Do not submit the registration request. The user needs to select another domain.
+  </Step>
+</Steps>
+
+## Step 5: Register the domain
+
+Once the required registrant information is available and domain availability has been reconfirmed, you submit the domain for registration.
+
+<Note>
+  Card collection is not part of the initial registration journey in this flow.
+</Note>
+
+<Steps>
+  <Step title="You send the registration request">
+    Your backend calls [`POST /api/v1/domains/register` (Registration)](/api-reference/domains/registration).
+
+    The selected domain is registered against the `customer_id` created earlier.
+  </Step>
+  <Step title="Namify registers the domain">
+    Namify submits the domain registration to the registry.
+  </Step>
+  <Step title="Namify returns the registration result">
+    If registration is successful, the API returns the registration status and `order_id`.
+
+    Store the returned `order_id` and associate it with the user's registered domain in your system. The user can now continue in the partner product without completing a card step.
+  </Step>
+</Steps>
+
+## Step 6: Show registration success
+
+Once Namify confirms successful registration, you reflect that result within your product.
+
+<Steps>
+  <Step title="You receive the successful Registration API response">
+    This comes from the Register Domain call in the previous step.
+  </Step>
+  <Step title="You update your system">
+    Associate the registered domain and `order_id` with the correct user.
+  </Step>
+  <Step title="You show success to the user">
+    The user sees that their domain has been registered and can continue in your product.
+  </Step>
+</Steps>
+
+## Step 7: RAA verification
+
+RAA verification happens after registration and is separate from the deferred card-collection journey.
+
+After registration, Namify sends a verification link to the registrant's email address.
+
+The registrant must verify their email within 14 days.
+
+- **If verified within 14 days** → The domain continues functioning normally.
+- **If not verified within 14 days** → The domain is suspended until verification is completed.
+
+## Step 8: Complete card collection
+
+Where card information is still required after registration, Namify can use the Mandatory Activation Flow (MAF) to prompt the user to complete the outstanding action.
+
+<Steps>
+  <Step title="User opens Manage Domain">
+    The partner's Manage Domain entry point takes the user to the Namify domain-management experience.
+  </Step>
+  <Step title="Namify surfaces the outstanding action">
+    The user is prompted to add the required card details.
+  </Step>
+  <Step title="The user completes card collection">
+    Once the required card details are successfully added, the outstanding action is complete.
+  </Step>
+</Steps>
+
+<Warning>
+  The user has **15 full days from registration** to complete the outstanding card action.
+
+  If the action remains incomplete at the **start of Day 16**, the domain can be soft suspended.
+</Warning>
+
+Soft suspension temporarily deactivates the domain. The domain is not deleted.
+
+The user can return to the Namify management experience, complete the required card action, and restore the domain to its previous active state.
+
+<Info>
+  MAF is a conditional business rule for outstanding actions; it is not the same as RAA email verification.
+</Info>
+
+## RAA verification and MAF
+
+<CardGroup cols={2}>
+  <Card title="RAA verification" icon="envelope">
+    Mandatory ICANN email verification after registration.
+
+    - Triggered for the registrant email
+    - Must be completed within 14 days
+    - Failure results in domain suspension
+    - Restored once email verification is completed
+  </Card>
+
+  <Card title="Mandatory Activation Flow" icon="credit-card">
+    Conditional Namify business rule used when an agreed post-registration action remains outstanding.
+
+    - Can be used for deferred card collection
+    - User has 15 full days to complete the required action
+    - If incomplete at the start of Day 16, the domain can be soft suspended
+    - Restored once the outstanding action is completed
+  </Card>
+</CardGroup>
+
+## Swim-lane diagram
+
+The swim-lane diagram separates the journey across three lanes:
+
+### Your platform
+
+- Search for a domain
+- User selects a domain
+- Create the user / collect the required registrant details
+- Show registration success
+
+### Namify: API layer
+
+- MetaSearch returns availability, pricing and suggestions
+- Create user creates the customer and returns `customer_id`
+- Availability checks that the selected domain is still available
+- Register Domain submits the domain registration and returns the result
+
+### Namify platform
+
+- RAA verification runs after registration
+- MAF handles the deferred card-collection requirement where applicable
+- Domain management provides the destination for ongoing management and outstanding actions
+- Soft suspension may apply if the MAF action is not completed within the required period
+
+## Systems diagram
+
+The systems diagram separates the partner environment and Namify platform.
+
+<Tabs>
+  <Tab title="Partner environment">
+    - **Partner backend.** Stores the Namify API key and makes server-side calls to Namify.
+    - **Partner datastore.** Maps the customer/user to the domain and stores relevant identifiers such as `customer_id` and `order_id`.
+    - **Search & selection UI.** Search field, pricing, suggestions and domain selection are shown in the partner product.
+    - **Registrant details UI.** Collects the required user and registrant information before registration.
+    - **Manage Domain entry point.** Keeps the registered domain visible and sends the user to Namify for ongoing management or any outstanding action.
+  </Tab>
+  <Tab title="Namify platform">
+    - **API Gateway.** Validates partner API access and routes API requests.
+    - **Domain search service.** Returns search availability, registration/renewal pricing and optional suggestions.
+    - **Customer & registrant service.** Creates the customer and stores the registrant details supplied by the partner.
+    - **Registration service.** Re-checks availability and registers the domain with the registry.
+    - **Compliance & activation.** Runs RAA email verification and triggers MAF where an agreed post-registration action remains outstanding.
+    - **Domain management.** Handles ongoing domain management and deferred card collection through the Namify management experience.
+  </Tab>
+</Tabs>
+
+## Ownership summary
+
+<Tabs>
+  <Tab title="You own">
+    ### User experience
+
+    - Build the domain search and registration experience within your platform.
+    - Display domain availability, pricing and suggestions returned by Namify.
+    - Collect the required user and registrant details.
+    - Show registration success or failure.
+    - Keep the registered domain discoverable in the user's account and provide a Manage Domain entry point.
+
+    ### API integration
+
+    - Call the Search, Create Customer, Availability and Register Domain APIs.
+    - Store the returned `customer_id` and `order_id`.
+
+    ### Flow handoff
+
+    - Do not require a card step in the initial registration journey for this implementation.
+    - Provide the user with a clear Manage Domain entry point after registration.
+    - Make any outstanding post-registration action understandable to the user.
+    - Support the handoff into Namify when the user needs to complete deferred card collection.
+  </Tab>
+  <Tab title="Namify owns">
+    ### Domain platform
+
+    - Return domain availability, pricing and suggestions.
+    - Create the user and return the `customer_id`.
+    - Register the domain with the registry.
+    - Return the registration result and `order_id`.
+    - Provide the domain-management experience after registration.
+
+    ### Post-registration
+
+    - Send and manage RAA email verification.
+    - Suspend the domain if RAA verification is not completed within 14 days, and restore it once verified.
+    - Trigger MAF where the agreed card action remains outstanding.
+    - Collect the outstanding card details through the Namify management experience.
+    - Allow 15 full days from registration for the required MAF action to be completed.
+    - Soft-suspend the domain at the start of Day 16 if the action is still incomplete, and restore it once completed.
+  </Tab>
+  <Tab title="Shared responsibility">
+    - Ensure the registration request contains the required user/registrant fields.
+    - Ensure the user understands that RAA verification and any MAF action are separate post-registration requirements.
+    - Support the user in reaching the correct Namify experience when an outstanding action needs to be completed.
+  </Tab>
+</Tabs>
+
+## Managing the domain post purchase
+
+After registration, the domain needs to remain accessible to the user for ongoing management and for any outstanding post-registration action.
+
+The purchase and registration journey is built into your platform, while domain-management capabilities are provided by Namify.
+
+Provide a **Manage Domain** entry point within your product that takes the user to the relevant Namify management experience.
+
+Where deferred card collection is still outstanding, Namify can surface the required MAF action from this management experience.
+
+## Who owns what?
+
+<CardGroup cols={2}>
+  <Card title="You own" icon="user">
+    - Build the domain search and results experience in your product.
+    - Collect the user and registrant details required for registration.
+    - Send the required search, user, availability and registration API calls to Namify.
+    - Store the `customer_id` and `order_id` returned by Namify.
+    - Show registration success or failure within your product.
+    - Keep the domain visible in the user's account after registration.
+    - Provide a Manage Domain entry point for ongoing management and any outstanding card action.
+  </Card>
+
+  <Card title="Namify owns" icon="server">
+    - Return domain availability, pricing and suggestions.
+    - Create the user and return the `customer_id`.
+    - Register the domain with the registry and return the registration result / `order_id`.
+    - Handle domain management after purchase.
+    - Send and manage RAA verification.
+    - Trigger and manage MAF where the agreed card action remains outstanding.
+    - Collect the outstanding card details.
+    - Soft-suspend the domain at the start of Day 16 if the action remains incomplete, and restore it once completed.
+  </Card>
+</CardGroup>
+
+## What if something goes wrong?
+
+Failures are handled at the stage of the Hybrid journey where they occur.
+
+<AccordionGroup>
+  <Accordion title="Search or availability request fails">
+    If Namify does not return the required domain data, do not allow the user to proceed with that domain. Show an appropriate error and allow them to retry.
+  </Accordion>
+
+  <Accordion title="User creation fails">
+    If the user cannot be created, no `customer_id` is returned. Do not proceed to registration until user creation succeeds.
+  </Accordion>
+
+  <Accordion title="Domain is no longer available">
+    If the selected domain is no longer available when re-checked, ask the user to select another domain.
+  </Accordion>
+
+  <Accordion title="Registration fails">
+    If registration fails, the domain is not registered. Show the appropriate failure state and allow the user to retry or select another domain where applicable.
+  </Accordion>
+
+  <Accordion title="RAA verification is not completed">
+    The registrant must verify their email within 14 days. If they do not, the domain is suspended until verification is completed.
+  </Accordion>
+
+  <Accordion title="MAF card action is not completed">
+    The user has 15 full days from registration to complete the outstanding card action.
+
+    If it remains incomplete at the start of Day 16, the domain can be soft suspended.
+
+    The user can complete the action later and restore the domain.
+  </Accordion>
+
+  <Accordion title="Deferred card collection fails">
+    If the user attempts to add card details through the Namify management experience and the card/tokenization step fails, keep the MAF action incomplete and allow the user to retry.
+
+    Do not mark the card action as complete until Namify confirms successful collection.
+
+    If the action is still incomplete at the start of Day 16, the domain can move into soft suspension until the user successfully completes the required action.
+  </Accordion>
+</AccordionGroup>
+
+### Who handles what?
+
+<CardGroup cols={2}>
+  <Card title="You" icon="user">
+    - Handle errors within the user-facing partner experience.
+    - Handle failed API responses and prevent the user from progressing when a required registration step has not completed.
+    - Show appropriate retry, failure or alternative-domain states.
+    - Show registration success only after Namify confirms that registration has completed.
+    - Keep the Manage Domain entry point available so users can complete outstanding post-registration actions.
+  </Card>
+
+  <Card title="Namify" icon="server">
+    - Return the relevant API success or failure response.
+    - Register the domain once the required pre-registration conditions are satisfied.
+    - Send and manage RAA verification after registration.
+    - Suspend the domain if RAA verification is not completed within 14 days.
+    - Trigger MAF where the agreed card action remains outstanding.
+    - Handle card-collection/tokenization failures within the Namify experience.
+    - Soft-suspend the domain at the start of Day 16 if the MAF action remains incomplete, and restore it once the required action is completed.
+  </Card>
+</CardGroup>

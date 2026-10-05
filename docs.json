@@ -26,6 +26,8 @@
           "low-lift",
           "hybrid",
           "hybrid-draft",
+          "hybrid-deferred",
+          "hybrid-default",
           "full-api",
           "go-live-checklist"
         ]
@@ -149,8 +151,7 @@
           "changelog",
           "upcoming"
         ]
-      },
-      "hybrid-default"
+      }
     ]
   },
   "navbar": {
