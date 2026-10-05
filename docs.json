@@ -3,7 +3,7 @@
   "theme": "mint",
   "name": "Namify API",
   "colors": {
-    "primary": "#FFF",
+    "primary": "#000",
     "light": "#FFF",
     "dark": "#000"
   },
