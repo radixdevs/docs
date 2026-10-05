@@ -8,7 +8,7 @@
     "dark": "#000"
   },
   "navigation": {
-    "pages": [
+    "groups": [
       {
         "group": "Getting started",
         "pages": [
@@ -149,8 +149,7 @@
           "changelog",
           "upcoming"
         ]
-      },
-      "hybrid-draft-what-is-hybrid-hybrid-lets-you-build-the-domain-search-selection-and-registration-experience-directly-into-your-platform-while-namify-handles-the-underlying-domain-registration-infras"
+      }
     ]
   },
   "navbar": {
