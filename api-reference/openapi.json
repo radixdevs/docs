@@ -449,12 +449,50 @@
 			"get": {
 				"tags": ["Customers"],
 				"summary": "Get customer details",
-				"description": "Retrieves detailed information for a specific customer account.\n\n<Warning>This is what we're building next. If something here unblocks your integration, let us know at [partner@namify.tech](mailto:partner@namify.tech) - it moves up the list.</Warning>",
-				"x-hidden": true,
-				"x-playground": "none",
+				"description": "Retrieves the account details of an existing customer, identified by their email address.\n\n**Customer ID:** The response includes the customer's `customer_id` — the identifier required for subsequent operations such as `POST /api/v1/domains/register` and `GET /api/v1/domains/orders`. Use this endpoint to look it up if it was not stored at signup.\n\n**Customer requirement:** The email must match an account previously created via `POST /api/v1/customers/signup`. Submitting an invalid or unregistered email returns a `422` error.",
+				"parameters": [
+					{
+						"name": "email",
+						"in": "query",
+						"required": true,
+						"description": "Email address of the customer to retrieve. Must match an existing customer account created via `POST /api/v1/customers/signup`.",
+						"schema": { "type": "string", "format": "email", "example": "john.doe@example.com" }
+					}
+				],
 				"responses": {
 					"200": {
-						"description": "Coming soon."
+						"description": "Customer details retrieved successfully.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/CustomerDetailsResponse" },
+								"example": {
+									"email": "john.doe@example.com",
+									"customer_id": 34851325,
+									"creation_date": "Sep 3, 2026",
+									"status": "Active"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "API key is missing or invalid.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorUnauthorized" }
+							}
+						}
+					},
+					"422": {
+						"description": "The supplied email address is invalid or does not match any existing customer account.",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/ErrorInvalidOrder" },
+								"example": {
+									"status": "ERROR",
+									"message": "Invalid customer email"
+								}
+							}
+						}
 					}
 				}
 			},
@@ -2220,6 +2258,15 @@
 				"properties": {
 					"message": { "type": "string", "example": "Customer created" },
 					"customer_id": { "type": "integer", "description": "Unique ID assigned to the newly created customer. Use this value as `customer_id` in subsequent calls (e.g. domain registration, order lookup).", "example": 85384231 }
+				}
+			},
+			"CustomerDetailsResponse": {
+				"type": "object",
+				"properties": {
+					"email": { "type": "string", "format": "email", "description": "Email address of the customer account.", "example": "john.doe@example.com" },
+					"customer_id": { "type": "integer", "description": "Unique ID of the customer. Use this value as `customer_id` in subsequent calls (e.g. domain registration, order lookup).", "example": 34851325 },
+					"creation_date": { "type": "string", "description": "Human-readable date the customer account was created (e.g. 'Sep 3, 2026').", "example": "Sep 3, 2026" },
+					"status": { "type": "string", "description": "Current status of the customer account.", "example": "Active" }
 				}
 			},
 			"RegisterResponse": {
