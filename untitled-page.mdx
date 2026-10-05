@@ -1,0 +1,502 @@
+---
+sidebarTitle: "Hybrid Default Flow"
+icon: "route"
+title: "Hybrid Integration Guide: Default Flow for Partners"
+description: "Build domain search, purchase, and registration into your platform with Namify APIs, while Namify handles registration, compliance, and management."
+hidden: true
+---
+
+Hybrid lets you build the domain search, purchase, and registration experience directly into your platform, while Namify handles the underlying domain-registration, support & compliance.
+
+Your users stay within your product throughout the search, purchase & registration journey. Your platform uses Namify APIs to search for domains, create users, and register domains, while billing can be handled either by you or Namify.
+
+Once the domain has been registered, all ongoing domain management takes place on Namify.
+
+## Who is it suited for?
+
+Hybrid is suited for partners who:
+
+- Want the domain search to feel like a native part of their product
+- Want control over the search, selection, checkout, and post-purchase experience
+- Are comfortable integrating with Namify APIs
+- Don't want to build or manage the underlying domain-registration infrastructure
+- Need flexibility over who handles user billing: your platform or Namify
+
+## Journey at a glance
+
+The standard user journey is:
+
+| Where | What happens |
+| --- | --- |
+| **Your platform** | The user searches for a domain → Namify returns availability, pricing and suggestions → the user selects a domain |
+| **Your platform → Namify** | You collect the required user/registrant details → create the user on Namify → Namify returns the `customer_id` |
+| **Your platform / Namify** | You collect card details → for a free Radix domain, the card is tokenized → for a paid non-Radix domain, payment is processed |
+| **Your platform → Namify** | You register the selected domain → Namify associates the domain with the user → registration is confirmed |
+| **Post-registration** | The domain appears in the partner product → RAA email verification runs in parallel → the user can access domain management through the Manage Domain entry point |
+
+### Flow overview
+
+1. Entry
+2. Search
+3. Search results
+4. Registrant details
+5. Card details
+   - Free Radix domain: card tokenization
+   - Paid non-Radix domain: payment processing
+6. Register domain
+7. Registration success
+8. Domain appears in partner product
+9. Manage domain
+
+<Info>
+  In parallel after registration:
+
+  - RAA verification email is sent.
+  - If verification is completed within 14 days, the domain remains active.
+  - If verification is not completed within 14 days, the domain is suspended.
+  - The domain can be restored after verification is completed.
+</Info>
+
+## Step 1: Search for domain
+
+The user starts their domain search directly on your platform.
+
+<Steps>
+  <Step title="User enters a domain search">
+    The user enters a name or domain into the search experience you've built.
+  </Step>
+  <Step title="You send the search to Namify">
+    Your backend calls [`GET /v1/search` (MetaSearch)](/api-reference/domains/metasearch).
+
+    You send the user's search term to Namify.
+
+    You can also configure the same MetaSearch request to return automatic or AI-generated domain suggestions. These are options within the same API call, not separate flow branches.
+  </Step>
+  <Step title="Namify returns the search results">
+    Namify returns:
+
+    - Domain options and availability
+    - Registration and renewal pricing
+    - API or AI-generated suggestions, if requested
+  </Step>
+  <Step title="You display the results">
+    You display the returned domain options within your platform.
+
+    The user stays on your platform throughout this experience.
+  </Step>
+</Steps>
+
+## Step 2: User selects domain
+
+The user chooses the domain they want from the search results displayed on your platform.
+
+<Steps>
+  <Step title="User selects their preferred domain">
+    For example:
+
+    `mybrand.store - Available - $X/year -> Select`
+
+    The domain has not been registered yet.
+  </Step>
+  <Step title="You store the user's selection">
+    You retain the selected domain and move the user into the registration journey.
+  </Step>
+</Steps>
+
+## Step 3: Create the user
+
+Before the selected domain can be registered, you create the user with Namify.
+
+<Steps>
+  <Step title="You collect the required user details">
+    If you already have the required user/registrant information, use it.
+
+    If not, collect the missing information within your platform.
+  </Step>
+  <Step title="You create the user on Namify">
+    Your backend calls [`POST /api/v1/users/signup` (Create user)](/api-reference/customer/signup).
+
+    You send the required user and registrant details through this request.
+  </Step>
+  <Step title="Namify creates the user">
+    Namify creates the user and returns a unique `customer_id`.
+
+    Store the returned `customer_id` and associate it with the corresponding user in your system, as you'll use it in the next step when registering the selected domain.
+
+    The contact information provided when creating the user is used as the domain's registrant, admin, technical and billing contact information.
+  </Step>
+</Steps>
+
+## Step 4: Complete payment
+
+<Tabs>
+  <Tab title="Option A: You handle billing">
+    If you handle billing, what happens at this stage depends on whether the selected domain is paid or free.
+
+    ### Paid domain
+
+    <Steps>
+      <Step title="You collect payment">
+        The user completes payment through your billing experience.
+      </Step>
+      <Step title="You confirm payment">
+        Once payment succeeds, you can continue to domain registration.
+      </Step>
+    </Steps>
+
+    ### Free domain
+
+    There is no upfront charge for the domain itself.
+
+    If your implementation collects card details before registration, collect and tokenize the user's card. This enables future auto-renewal and helps prevent abuse.
+
+    ### API call
+
+    No Namify API call has been established for the user payment or card-collection step. Your own billing/payment system handles this part of the journey.
+  </Tab>
+  <Tab title="Option B: Namify handles billing">
+    <Steps>
+      <Step title="You have already created the user">
+        The user was created in Step 3.
+      </Step>
+      <Step title="Initiate the Namify payment experience">
+        Redirect the user to the Namify-hosted payment experience.
+
+        - **Paid domain:** The user completes payment before registration.
+        - **Free domain:** The user provides a payment card, which is tokenized for future auto-renewal.
+      </Step>
+      <Step title="Receive the payment result">
+        Once the payment or card-tokenization step is completed successfully, continue to domain registration.
+      </Step>
+    </Steps>
+
+    ### API call
+
+    TBD
+  </Tab>
+</Tabs>
+
+## Step 5: Check domain availability
+
+Before attempting registration, you must confirm that the selected domain is still available.
+
+<Note>
+  Namify's Registration documentation explicitly requires this check before registration.
+</Note>
+
+<Steps>
+  <Step title="You check the selected domain again">
+    Your backend calls [`GET /api/v1/domains/availability` (Availability)](/api-reference/domains/availability).
+  </Step>
+  <Step title="Namify returns the current availability">
+    If the domain is:
+
+    - **Available** → Continue to the Register Domain step.
+    - **Unavailable** → Do not submit the registration request. The user needs to select another domain.
+  </Step>
+</Steps>
+
+## Step 6: Register the domain
+
+Once the user details are available, domain availability has been reconfirmed, and any required pre-registration payment or card step is complete, you submit the domain for registration.
+
+<Steps>
+  <Step title="You send the registration request">
+    Your backend calls [`POST /api/v1/domains/register` (Registration)](/api-reference/domains/registration).
+
+    The selected domain is registered against the `customer_id` created earlier.
+  </Step>
+  <Step title="Namify registers the domain">
+    For paid domains, registration begins only after successful payment confirmation.
+
+    For free domains, no payment transaction is required for the domain itself.
+
+    Namify then submits the registration to the registry. The user information provided during Create user is automatically used as the domain's registrant, admin, technical and billing contact information.
+  </Step>
+  <Step title="Namify returns the registration result">
+    If the registration is successful, the API returns:
+
+    - `status: SUCCESS`
+    - `order_id`
+
+    Store the returned `order_id` and associate it with the user's registered domain in your system. You'll use this identifier for future domain operations such as renewals, DNS management and order lookup.
+  </Step>
+</Steps>
+
+## Step 7: Show registration success
+
+Once Namify confirms successful registration, you reflect that result within your product.
+
+<Steps>
+  <Step title="You receive the successful Registration API response">
+    This comes from the same `POST /api/v1/domains/register` call in the previous step.
+  </Step>
+  <Step title="You update your system">
+    Associate the registered domain and `order_id` with the correct user.
+  </Step>
+  <Step title="You show success to the user">
+    The user sees within your product that their domain has been successfully registered.
+  </Step>
+</Steps>
+
+**API call:** No additional API call.
+
+## Step 8: Post-registration verification
+
+After the domain is registered, RAA verification is triggered.
+
+### RAA verification
+
+After registration, Namify sends a verification link to the registrant's email address.
+
+The registrant must verify their email within 14 days.
+
+- **If verified within 14 days** → The domain continues functioning normally.
+- **If not verified within 14 days** → The domain is suspended.
+
+The domain can be restored once the registrant completes the email verification.
+
+## Swim-lane diagram
+
+<Tabs>
+  <Tab title="Your billing">
+    ### Your platform
+
+    1. **Search for a domain.** The user searches inside the domain experience you have built.
+    2. **User selects a domain.** You display the returned options; the user picks one and you store the selection.
+    3. **Create the user.** You collect the required user and registrant details in your own UI.
+    4. **4A. You handle billing.** The user pays through your checkout. Complete payment or card collection before continuing.
+    5. **7. Show registration success.** You store the `order_id`, associate the domain with the user, and confirm success.
+
+    ### Namify: API & Coupon
+
+    - **API Call: MetaSearch.** Returns availability, pricing and optional AI suggestions.
+    - **API Call: Create user.** Namify creates the account and returns the `user_id`.
+    - **API Call: Check availability.** Confirms the domain is still available before you register.
+    - **API Call: Register the domain.** Registers the domain against the stored `user_id`.
+
+    ### Namify platform
+
+    - **Settlement & registry.** Namify settles billing on our end, then submits the registration to the registry.
+    - **8. Post-Reg verification.** RAA verification is triggered after registration. If completed within 14 days, the domain remains active. If not, the domain is suspended until verification is completed.
+    - **Domain management.** Handled by Namify.
+  </Tab>
+  <Tab title="Namify billing">
+    ### Your platform
+
+    1. **Search for a domain.** The user searches inside the domain experience you have built.
+    2. **User selects a domain.** You display the returned options; the user picks one and you store the selection.
+    3. **Create the user.** You collect the required user and registrant details in your own UI.
+    4. **7. Show registration success.** You store the `order_id`, associate the domain with the user, and confirm success.
+
+    ### Namify: API & Coupon
+
+    - **API Call: MetaSearch.** Returns availability, pricing and optional AI suggestions.
+    - **API Call: Create user.** Namify creates the account and returns the `user_id`.
+    - **API Call: Check availability.** Confirms the domain is still available before you register.
+    - **API Call: Register the domain.** Registers the domain against the stored `user_id`.
+
+    ### Namify platform
+
+    - **4B. Namify handles billing.** The user completes the required billing step through the Namify payment experience.
+    - **Settlement & registry.** Namify settles billing on our end, then submits the registration to the registry.
+    - **8. Post-Reg verification.** RAA verification is triggered after registration. If completed within 14 days, the domain remains active. If not, the domain is suspended until verification is completed.
+    - **Domain management.** Handled by Namify.
+  </Tab>
+</Tabs>
+
+## Systems diagram
+
+<Tabs>
+  <Tab title="Your billing">
+    ### Partner environment
+
+    Owns the user experience.
+
+    - **Partner backend.** Holds the Namify API key and makes every server-side call.
+    - **Partner datastore.** Maps `customer_id` and `order_id` to your user records.
+    - **Search & selection UI.** Search field, pricing and domain selection.
+    - **Checkout & card capture.** Collect payment (paid domains) or tokenize the payment card (free domains) before registration. Card goes to your processor, never to Namify.
+    - **Your payment provider.** Processes the card through your existing payment setup. Namify is not involved.
+
+    ### Namify platform
+
+    Registration and compliance.
+
+    - **API Gateway.** Validates your API key and routes every request.
+    - **Domain search service.** MetaSearch: availability, pricing and AI suggestions.
+    - **User & registrant service.** Creates the account, issues `customer_id`, holds the contacts.
+    - **Registration service.** Registers the domain and issues `order_id`.
+    - **Compliance service.** RAA verification and lifecycle notifications.
+    - **Registration Failed.** Registration failed or the domain was no longer available.
+    - **Domain deactivated.** RAA verification not completed within 14 days.
+  </Tab>
+  <Tab title="Namify billing">
+    ### Partner environment
+
+    Owns the user experience, not the payment.
+
+    - **Partner backend.** Holds the Namify API key and makes every server-side call.
+    - **Partner datastore.** Maps `customer_id` and `order_id` to your user records.
+    - **Search & selection UI.** Search field, pricing and domain selection.
+    - **Checkout shell.** Renders the Namify module (embedded module). No card data touches your systems.
+
+    ### Namify platform
+
+    Registration and compliance.
+
+    - **API Gateway.** Validates your API key and routes every request.
+    - **Domain search service.** MetaSearch: availability, pricing and AI suggestions.
+    - **User & registrant service.** Creates the account, issues `customer_id`, holds the contacts.
+    - **Namify-hosted billing.** Collects the required payment/card details and returns the result required to continue registration.
+    - **Registration service.** Completes registration, issues `order_id`.
+    - **Registration Failed.** Registration failed or the domain was no longer available.
+    - **Domain deactivated.** RAA verification not completed within 14 days.
+  </Tab>
+</Tabs>
+
+## Ownership summary
+
+<Tabs>
+  <Tab title="You own">
+    ### User experience
+
+    - Build the domain search, purchase and registration experience within your platform.
+    - Display domain availability, pricing and suggestions returned by Namify.
+    - Guide the user through the registration journey.
+    - Show registration success or failure.
+    - Provide an entry point to domain management after purchase.
+
+    ### API integration
+
+    - Call the MetaSearch API.
+    - Collect the required user and registrant details.
+    - Call the Create Customer API.
+    - Store the returned `customer_id`.
+    - Re-check domain availability before registration.
+    - Call the Register Domain API.
+    - Store the returned `order_id`.
+
+    ### Billing
+
+    - If you handle billing for a paid domain, collect and process payment before registration.
+    - If your implementation handles card collection for a free domain, ensure the card is captured/tokenized according to the agreed flow.
+  </Tab>
+  <Tab title="Namify owns">
+    ### Domain platform
+
+    - Return domain availability, pricing and suggestions.
+    - Create the user and return the `customer_id`.
+    - Register the domain with the registry.
+    - Return the registration result and `order_id`.
+
+    ### Billing / card collection
+
+    - Collect payment for paid domains.
+    - Collect/tokenize card details for free domains where required.
+    - Proceed with paid-domain registration only after payment succeeds.
+
+    ### Post-registration
+
+    - Manage the domain after registration.
+    - Handle renewals, DNS management and other domain-management operations.
+    - Send and manage RAA email verification.
+    - Suspend the domain if RAA verification is not completed within 14 days, and restore it once verified.
+  </Tab>
+  <Tab title="Shared responsibility">
+    - Ensure the registration request contains the required user/registrant fields.
+    - Ensure the user understands any outstanding post-registration action.
+    - Support completion of RAA verification where applicable.
+  </Tab>
+</Tabs>
+
+## Managing the domain post purchase
+
+After registration, the domain needs to remain accessible to the user for ongoing management.
+
+The purchase and registration journey is built into your platform, but domain-management capabilities are provided by Namify.
+
+You can give users a "Manage domain" entry point within your product that takes them to the relevant Namify management experience.
+
+This allows the domain to remain discoverable from your product without requiring you to build the underlying domain-management functionality yourself.
+
+## Who owns what?
+
+<CardGroup cols={2}>
+  <Card title="You own" icon="user">
+    - Build the domain search and results experience in your product.
+    - Send the required search, user and registration API calls to Namify.
+    - Display domain availability, pricing and suggestions returned by Namify.
+    - Collect the user and registrant details required for registration.
+    - Store the `customer_id` returned by Namify.
+    - Handle the user's payment experience, if you are responsible for billing.
+    - Send the selected domain for registration.
+    - Show registration success or failure within your product.
+    - Provide an entry point to domain management after purchase.
+  </Card>
+
+  <Card title="Namify owns" icon="server">
+    - Return domain availability, pricing and suggestions.
+    - Create the user and return the `customer_id`.
+    - If Namify owns billing/card collection:
+      - process payment for paid domains
+      - collect/tokenize card details for free domains where required
+    - Register the domain with the registry.
+    - Return the registration result and `order_id`.
+    - Handle domain management after purchase.
+    - Send and manage RAA verification.
+  </Card>
+</CardGroup>
+
+## What if something goes wrong?
+
+Failures are handled at the stage of the Hybrid journey where they occur.
+
+<AccordionGroup>
+  <Accordion title="Search or availability request fails">
+    If Namify does not return the required domain data, do not allow the user to proceed with that domain. Show an appropriate error and allow them to retry.
+  </Accordion>
+
+  <Accordion title="User creation fails">
+    If the user cannot be created, no `customer_id` is returned. Do not proceed to registration until user creation succeeds.
+  </Accordion>
+
+  <Accordion title="Payment fails">
+    **Paid-domain payment fails:** If payment fails, do not proceed to registration. The user must successfully complete payment before the domain can be registered.
+
+    **Free-domain card collection fails:** If the implementation requires card collection before registration, keep the user in the card-collection step until it succeeds.
+  </Accordion>
+
+  <Accordion title="Domain is no longer available">
+    Re-check availability before registration. If the domain is no longer available, ask the user to select another.
+  </Accordion>
+
+  <Accordion title="Registration fails">
+    If registration fails, the domain is not registered. Show the appropriate failure state and allow the user to retry or select another domain where applicable.
+  </Accordion>
+
+  <Accordion title="RAA verification is not completed">
+    The registrant must verify their email within 14 days. If they do not, the domain is suspended until the verification link is completed.
+  </Accordion>
+</AccordionGroup>
+
+### Who handles what?
+
+<CardGroup cols={2}>
+  <Card title="You" icon="user">
+    - Handle errors within the user-facing experience.
+    - Handle failed API responses and prevent the user from progressing when a required step has not completed.
+    - Handle user-payment failures if you own billing.
+    - Show appropriate retry, failure or alternative-domain states.
+    - Show registration success only after Namify confirms that registration has completed.
+  </Card>
+
+  <Card title="Namify" icon="server">
+    - Return the relevant API success or failure response.
+    - Handle paid-domain payment failures when Namify owns billing.
+    - Handle card-collection/tokenization failures when Namify owns that step.
+    - Register the domain once the required pre-registration conditions are satisfied.
+    - Send and manage RAA verification after registration.
+    - Suspend the domain if RAA verification is not completed within 14 days.
+  </Card>
+</CardGroup>

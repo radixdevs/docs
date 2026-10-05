@@ -8,7 +8,7 @@
     "dark": "#000"
   },
   "navigation": {
-    "groups": [
+    "pages": [
       {
         "group": "Getting started",
         "pages": [
@@ -149,7 +149,8 @@
           "changelog",
           "upcoming"
         ]
-      }
+      },
+      "untitled-page"
     ]
   },
   "navbar": {
