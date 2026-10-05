@@ -1,0 +1,574 @@
+---
+sidebarTitle: "Hybrid Go Live Flow"
+icon: "rocket"
+title: "Hybrid Integration Guide: Publish / Go Live Flow"
+description: "Offer domains at the Publish / Go Live moment with a shortened Quick Registration journey, then complete deferred details after registration on Namify."
+hidden: true
+---
+
+## What is Hybrid?
+
+Hybrid lets you build the domain search and registration experience directly into your platform, while Namify handles the underlying domain-registration management, support and compliance.
+
+In this flow, the domain opportunity is surfaced when the user is ready to publish or go live.
+
+The user completes a shortened registration journey using minimal information, allowing them to continue publishing quickly. Any remaining required information is completed after registration through Namify.
+
+## Who is it suited for?
+
+This flow is suited for select partner implementations where:
+
+- Domain registration is introduced at the point the user is ready to publish or go live.
+- Minimising friction at this moment is important.
+- The partner can provide the information required to complete the initial registration.
+- Remaining profile and billing information can be completed after registration.
+- The partner can direct the user into Namify for outstanding post-registration actions.
+
+<Warning>
+  This flow should be used only where the quick-registration approach has been agreed for the partner implementation.
+</Warning>
+
+## Journey at a glance
+
+The Publish / Go Live journey is:
+
+| Where | What happens |
+| --- | --- |
+| **Your platform** | The user reaches Publish / Go Live → a domain offer is surfaced → the user selects or searches for a domain. |
+| **Your platform → Namify** | You collect the minimal user-facing information → create the user on Namify → Namify returns the `customer_id`. |
+| **Your platform → Namify** | You re-check the selected domain's availability → submit the registration request → Namify registers the domain. |
+| **Your platform** | Registration is confirmed → the registered domain is associated with the user → the user can continue publishing. |
+| **Post-registration** | RAA email verification runs separately after registration. Where agreed information or card details remain outstanding, Namify uses Mandatory Authentication Flow to prompt the user to complete the required action. |
+| **Namify** | The user opens the activation link → accesses the Namify management experience → completes the missing information → the domain remains active once the required action is completed. |
+
+## Step 1 — Reach Publish / Go Live
+
+### 1. User reaches the Publish / Go Live moment
+
+For example:
+
+- Publish website
+- Launch product
+- Make project live
+
+### 2. You surface the domain proposition
+
+Before the user enters the domain-selection journey, show the key offer details relevant to the implementation, such as:
+
+- Free or paid indication
+- Renewal price
+- Short value statement
+
+## Step 2 — Surface the domain offer
+
+You introduce the domain offer within the Publish / Go Live journey. The experience should keep the decision lightweight and focused.
+
+The offer can include:
+
+- Partner-configured hero Radix TLD
+- Free year-1 indication for Radix TLDs
+- Paid indication for `.com`
+- Renewal pricing
+- Search field, where the user wants to try another domain
+
+The user can then continue into the domain-selection experience.
+
+<Tip>
+  The go-live flow should surface the commercial context early and keep the experience focused on fast conversion rather than broad exploration.
+</Tip>
+
+## Step 3 — Search and selection
+
+### 1. You send the search to Namify
+
+Your backend calls:
+
+`GET /v1/search` — MetaSearch
+
+You send the user's search term to Namify.
+
+### 2. Namify returns the results
+
+For the Publish / Go Live flow, return a compact result set:
+
+- Hero Radix TLD — exact match, free for year 1
+- `.com` — exact match, paid
+- One additional Radix TLD
+
+### 3. You display the results
+
+Show 3 domain options within the Publish / Go Live experience.
+
+Keep the results focused, do not show the full TLD catalogue or a "Show more" option.
+
+If suggestions are enabled, show only a lightweight alternative below the main results.
+
+## Step 4 — Quick registration
+
+The user completes a shortened registration form so they can continue through the Publish / Go Live journey with minimal interruption.
+
+### User-facing information collected at this stage
+
+- Full name
+- Email address
+- Acceptance of Namify Terms & Conditions
+
+The goal is to keep the visible registration experience as lightweight as possible.
+
+Although the user-facing form is intentionally minimal, the information required to register the domain still needs to be available when the registration request is submitted.
+
+The attached flow requires:
+
+- A password in addition to the user's email
+- The address information required for domain registration
+
+The password can be generated by the partner or provided by the user, depending on the agreed implementation.
+
+Where the user does not provide their address during Quick Registration, the partner supplies the required address information for the initial registration.
+
+<Note>
+  The user can update their password or address later through Namify.
+</Note>
+
+## Step 5 — Create the user
+
+Before the selected domain can be registered, create the user with Namify.
+
+### 1. You send the user details
+
+Your backend calls:
+
+`POST /api/v1/customers/signup` — Create Customer
+
+Send the user / registrant information required for the agreed Quick Registration implementation.
+
+### 2. Namify creates the user
+
+Namify creates the user and returns a unique `customer_id`.
+
+Store the returned `customer_id` and associate it with the corresponding user in your system.
+
+You will use it when registering the selected domain.
+
+## Step 6 — Check domain availability
+
+Before attempting registration, confirm that the selected domain is still available.
+
+### 1. You re-check the selected domain
+
+Your backend calls:
+
+`GET /api/v1/domains/availability` — Availability
+
+### 2. Namify returns the current status
+
+| Status | Action |
+| --- | --- |
+| **Available** | Continue to registration. |
+| **Unavailable** | Do not submit the registration request. Ask the user to select another domain. |
+
+## Step 7 — Register the domain
+
+Once:
+
+- the user has been created,
+- the required registration information is available, and
+- availability has been reconfirmed,
+
+submit the domain for registration.
+
+Your backend calls:
+
+`POST /api/v1/domains/register` — Register Domain
+
+The selected domain is registered against the `customer_id` created earlier.
+
+Namify submits the domain registration to the registry.
+
+If registration succeeds, Namify returns the registration result, including:
+
+- Registration status
+- `order_id`
+
+Store the returned `order_id` and associate it with the user and registered domain in your system.
+
+Any information intentionally deferred from the initial journey remains outstanding and is handled after registration.
+
+Once Namify confirms successful registration, reflect the result within your product.
+
+### 1. You receive the Registration API response
+
+This comes from the same `POST /api/v1/domains/register` call in the previous step.
+
+### 2. You update your system
+
+Associate the registered domain and `order_id` with the correct user.
+
+### 3. You show success
+
+The user sees:
+
+**Your domain is registered**
+
+And can continue into the Publish / Go Live experience.
+
+<Note>
+  No additional Namify API call is required simply to show the success state.
+</Note>
+
+## Step 8 — Connect the domain in your product
+
+The registered domain now appears in the user's account within the partner product.
+
+You can show:
+
+- Domain name
+- Registration status
+- Pending verification status
+- Continue to Publish CTA
+- Manage Domain entry point
+
+The exact connection into the partner's product depends on the partner implementation.
+
+## RAA Verification
+
+RAA verification happens after registration.
+
+Namify sends a verification link to the registrant's email address.
+
+The registrant must verify their email within 14 days.
+
+| Outcome | Result |
+| --- | --- |
+| **If verified within 14 days** | The domain remains active. |
+| **If not verified within 14 days** | The domain is suspended. |
+
+The domain can be restored once email verification is completed.
+
+### Namify owns the RAA process
+
+Namify:
+
+- Sends the verification email
+- Tracks the verification status
+- Applies suspension if verification is not completed within 14 days
+- Restores the domain once verification is completed
+
+<Note>
+  No additional partner API call is required to trigger the user-facing email verification journey after registration.
+</Note>
+
+## MAF (Mandatory Activation Flow)
+
+MAF is used where information intentionally deferred from Quick Registration still needs to be completed.
+
+After registration, Namify can send the user a **Complete Verification / Activate your domain** email.
+
+The user opens the activation link and is taken to the Namify management experience.
+
+## Step 9 — Complete outstanding information
+
+Namify surfaces a **Complete your profile** prompt.
+
+The user completes the agreed outstanding information.
+
+Where card information is required, the user provides:
+
+- Card number
+- Expiry
+- CVV/CVC
+- Name on card
+
+This action happens within the Namify experience.
+
+You do not need to collect this deferred information inside the initial Publish / Go Live journey.
+
+Once the required information has been successfully provided:
+
+- The profile is complete.
+- The outstanding MAF action is resolved.
+- The domain remains active.
+- Ongoing domain management continues through Namify.
+
+No additional domain registration call is made — the domain was already registered earlier.
+
+### If the required action is not completed
+
+Based on the current Publish / Go Live flow:
+
+<Steps>
+  <Step title="15 days">
+    If the required action is not completed within 15 days, Namify sends a MAF reminder email. The reminder asks the user to complete the outstanding action within 48 hours.
+  </Step>
+  <Step title="Additional 48 hours">
+    If the required action is still incomplete after the additional 48-hour period, the domain is soft suspended.
+  </Step>
+  <Step title="Restoration">
+    The domain can be restored once the outstanding action is completed.
+  </Step>
+</Steps>
+
+## RAA vs MAF
+
+<CardGroup cols={2}>
+  <Card title="RAA Verification" icon="envelope-circle-check">
+    Mandatory email verification.
+
+    - Happens after registration
+    - User verifies the registrant email
+    - 14-day deadline
+    - Failure results in suspension
+    - Restored once verification is completed
+  </Card>
+
+  <Card title="MAF" icon="user-check">
+    Conditional Namify business rule for agreed deferred information.
+
+    - Happens after registration
+    - Used for outstanding profile / card actions
+    - Separate from RAA
+    - Can result in soft suspension
+    - Restored once the outstanding action is completed
+  </Card>
+</CardGroup>
+
+## Important registration constraints
+
+<Warning>
+  - The Publish / Go Live quick-registration path is intended for registrations that can proceed without a pre-registration payment step.
+  - If the selected domain requires payment before registration:
+    - Do not continue through the no-card Quick Registration path.
+    - Route the user through the applicable pre-registration payment experience before calling Register Domain.
+  - This prevents a paid domain from being registered before payment has successfully completed.
+</Warning>
+
+## Swimlane Diagram
+
+The flow spans three responsibility areas:
+
+<CardGroup cols={3}>
+  <Card title="Your platform" icon="window">
+    - Reach Publish / Go Live
+    - Surface domain offer
+    - Search & selection
+    - Quick Registration
+    - Show registration success
+    - Keep the domain associated with the user
+    - Provide access to ongoing management / outstanding actions
+  </Card>
+
+  <Card title="Namify — API" icon="code">
+    - MetaSearch
+    - Create Customer
+    - Check Availability
+    - Register the domain
+    - Return registration status and identifiers
+  </Card>
+
+  <Card title="Namify Platform" icon="server">
+    - RAA verification
+    - MAF activation / completion flow
+    - Soft suspension where applicable
+    - Domain management
+  </Card>
+</CardGroup>
+
+## Systems Diagram
+
+### Partner environment
+
+| Component | Responsibility |
+| --- | --- |
+| **Partner backend** | Stores the Namify API key and makes server-side calls to Namify. |
+| **Partner datastore** | Maps `customer_id` and `order_id` to the correct user and registered domain. |
+| **Publish / Go Live + search UI** | Surfaces the domain offer, user search or selection, and keeps the user inside the partner product. |
+| **Quick Registration UI** | Collects full name and email, accepts T&Cs, and supports the agreed quick-registration data model. |
+| **Connected domain + Manage Domain entry point** | Shows the registered domain to the user and routes them to Namify for domain management or outstanding actions. |
+
+### Namify platform
+
+| Component | Responsibility |
+| --- | --- |
+| **API Gateway** | Validates partner API calls and routes API requests. |
+| **Domain search service** | Returns search results, availability, pricing and suggestions. |
+| **Customer & registrant service** | Creates the user and stores registrant information required for registration. |
+| **Registration service** | Re-checks availability and submits the domain registration. |
+| **Compliance & activation** | Handles RAA verification and agreed MAF-based actions after registration. |
+| **Domain management** | Provides ongoing domain-management functionality. |
+
+## Ownership Summary
+
+### You own
+
+#### User experience
+
+- Introduce the domain offer within the Publish / Go Live experience.
+- Build the domain search and selection experience.
+- Build the Quick Registration experience.
+- Collect the agreed user-facing information.
+- Show registration success or failure.
+- Associate the registered domain with the user's product/account.
+- Allow the user to continue publishing after registration.
+
+#### API integration
+
+- Call MetaSearch where domain search is required.
+- Call Create Customer.
+- Store the returned `customer_id`.
+- Re-check domain availability.
+- Call Register Domain.
+- Store the returned `order_id`.
+- Associate the registered domain with the correct user.
+
+### Namify owns
+
+#### Domain platform
+
+- Return domain availability, pricing and suggestions.
+- Create the user and return the `customer_id`.
+- Confirm domain availability.
+- Register the domain with the registry.
+- Return the registration result and `order_id`.
+- Provide ongoing domain-management functionality after registration.
+
+#### Post-registration
+
+- Send and manage RAA verification.
+- Suspend the domain if RAA verification is not completed within the required period.
+- Restore it once verified.
+- Trigger MAF where agreed information was intentionally deferred.
+- Collect the outstanding information through the Namify experience.
+- Send applicable MAF reminders.
+- Apply soft suspension where the required MAF action remains incomplete.
+- Restore the domain once the action is completed.
+
+### Shared responsibility
+
+- Ensure the registration request contains the information required by the agreed Quick Registration implementation.
+- Clearly distinguish between information required before registration and information intentionally deferred.
+- Ensure the user understands outstanding post-registration actions.
+- Support completion of RAA verification and MAF where applicable.
+
+## Managing the domain post purchase
+
+After registration, the domain should remain accessible to the user from within the partner product.
+
+Domain-management functionality itself is provided by Namify.
+
+Provide a **Manage Domain** entry point that takes the user to the relevant Namify management experience.
+
+Through Namify, the user can:
+
+- Complete outstanding MAF actions
+- Update profile information
+- Manage DNS / settings
+- Manage renewals
+
+## Who owns what?
+
+<Tabs>
+  <Tab title="You own">
+    - Surface the domain offer at Publish / Go Live.
+    - Build the search and selection experience.
+    - Build Quick Registration.
+    - Collect the agreed user-facing details.
+    - Send the required Namify API calls.
+    - Store `customer_id` and `order_id`.
+    - Show registration success or failure.
+    - Associate the domain with the user.
+    - Allow the user to continue publishing.
+    - Provide a Manage Domain entry point.
+  </Tab>
+  <Tab title="Namify owns">
+    - Return domain availability, pricing and suggestions.
+    - Create the user.
+    - Return the `customer_id`.
+    - Check availability.
+    - Register the domain with the registry.
+    - Return the registration result and `order_id`.
+    - Handle ongoing domain management.
+    - Send and manage RAA verification.
+    - Trigger and manage MAF for agreed deferred actions.
+    - Collect outstanding profile / card information.
+    - Handle applicable suspension and restoration behaviour.
+  </Tab>
+</Tabs>
+
+## What if something goes wrong?
+
+Failures are handled at the stage where they occur.
+
+<AccordionGroup>
+  <Accordion title="Search / availability request fails">
+    If Namify does not return the required domain information:
+
+    - Do not allow the user to proceed with that domain.
+    - Show the appropriate retry state.
+    - Allow the user to select another domain where applicable.
+  </Accordion>
+
+  <Accordion title="If Create Customer API fails">
+    - No `customer_id` is returned.
+    - Do not submit the registration request.
+    - Keep the user in the Quick Registration journey until the required user creation step succeeds.
+  </Accordion>
+
+  <Accordion title="Domain is no longer available">
+    The selected domain must be re-checked before registration.
+
+    If it is no longer available:
+
+    - Do not call Register Domain.
+    - Ask the user to select another domain.
+  </Accordion>
+
+  <Accordion title="Registration fails">
+    If Register Domain fails:
+
+    - The domain is not registered.
+    - Do not show registration success.
+    - Show an appropriate failure / retry state.
+    - Allow the user to retry or select another domain where applicable.
+  </Accordion>
+
+  <Accordion title="RAA verification is not completed">
+    The registrant must verify their email within 14 days.
+
+    If they do not, the domain is suspended until verification is completed.
+  </Accordion>
+
+  <Accordion title="MAF is not completed">
+    Based on the current Flow C journey:
+
+    - MAF remains outstanding for 15 days.
+    - Namify then sends the applicable reminder.
+    - If it remains incomplete for the additional 48-hour period shown in the flow, the domain is soft suspended.
+    - The domain can be restored once the required action is completed.
+  </Accordion>
+</AccordionGroup>
+
+## What if something goes wrong? — Who handles what?
+
+<Tabs>
+  <Tab title="You">
+    - Handle errors within the partner-facing experience.
+    - Handle failed API responses.
+    - Prevent progression where a required pre-registration step has failed.
+    - Show appropriate retry / alternative-domain states.
+    - Show success only after Namify confirms successful registration.
+    - Keep the Namify management entry point accessible for outstanding post-registration actions.
+  </Tab>
+  <Tab title="Namify">
+    - Return the relevant API success / failure response.
+    - Create the user once valid information is received.
+    - Return availability status.
+    - Register the domain once registration conditions are satisfied.
+    - Send and manage RAA verification.
+    - Apply RAA suspension where required.
+    - Trigger the agreed MAF process.
+    - Collect outstanding information.
+    - Send applicable MAF reminders.
+    - Apply soft suspension where required.
+    - Restore the domain once the required action is completed.
+  </Tab>
+</Tabs>

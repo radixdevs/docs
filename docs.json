@@ -28,6 +28,7 @@
           "hybrid-draft",
           "hybrid-deferred",
           "hybrid-default",
+          "hybrid-publish",
           "full-api",
           "go-live-checklist"
         ]
